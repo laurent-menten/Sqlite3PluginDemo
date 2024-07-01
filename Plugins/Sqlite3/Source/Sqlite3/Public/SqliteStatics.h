@@ -133,7 +133,7 @@ public:
 	static FString ExtendedErrorString( ESqliteExtendedErrorCode ErrorCode );
 
 	/**
-	 * Checks if the native error code is the same as a ESqliteExtended]ErrorCode.
+	 * Checks if the native error code is the same as a ESqlite[Extended]ErrorCode.
 	 * 
 	 * @param NativeErrorCode - A native Sqlite error code
 	 * @param ErrorCode - An ESqlite[Extended]ErrorCode enum value
@@ -142,8 +142,21 @@ public:
 
 	UFUNCTION( BlueprintCallable, BlueprintPure, Category = "Sqlite3|Errors" )
 	static bool CheckSqliteErrorCode( int NativeErrorCode, ESqliteErrorCode ErrorCode );
-
+	
 	UFUNCTION( BlueprintCallable, BlueprintPure, Category = "Sqlite3|Errors" )
 	static bool CheckSqliteExtendedErrorCode( int NativeErrorCode, ESqliteExtendedErrorCode ErrorCode );
 
+	/**
+	 * Banched if the native error code is the same as a ESqlite[Extended]ErrorCode.
+	 * 
+	 * @param NativeErrorCode - A native Sqlite error code
+	 * @param ErrorCode - An ESqlite[Extended]ErrorCode enum value
+	 * @param Branch - An ESqliteDatabaseEqualityExecutionPins enum value
+	 */
+	
+	UFUNCTION( BlueprintCallable, Category = "Sqlite3|Errors", meta = (ExpandEnumAsExecs = "Branch") )
+	static void BranchIfSqliteErrorCode( int NativeErrorCode, ESqliteErrorCode ErrorCode, ESqliteDatabaseEqualityExecutionPins& Branch );
+
+	UFUNCTION( BlueprintCallable, Category = "Sqlite3|Errors", meta = (ExpandEnumAsExecs = "Branch") )
+	static void BranchIfSqliteExtendedErrorCode( int NativeErrorCode, ESqliteExtendedErrorCode ErrorCode, ESqliteDatabaseEqualityExecutionPins& Branch );
 };

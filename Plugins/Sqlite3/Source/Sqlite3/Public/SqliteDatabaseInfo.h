@@ -158,6 +158,14 @@ public:
 
 	// ---------------------------------------------------------------------------
 
+	/**
+	 * 
+	 */
+	UPROPERTY(EditAnywhere)
+	TMap<FString,FString> StoredStatements;
+
+	// ---------------------------------------------------------------------------
+
 	UPROPERTY(EditAnywhere, Category = "Schema")
 	FName SchemaName = FName( "main" );
 

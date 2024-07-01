@@ -1,5 +1,16 @@
 # Sqlite3 plugin for unreal engine
 
+This plugins is designed to expose the Sqlite3 API to blueprint and c++. It aims to provide an
+experience as seamless as possible to programmers with working knowledge of Sqlite.
+
+There are two separate modules:
+- Sqlite3: contains runtime code for accessing database.
+- Sqlite3Editor: contains development code like custom blueprint node or data asset validation.
+
+The Sqlite3 module provide a game instance subsystem that manage the open databases.
+It also provides the SqliteDatabase and SqliteStatement classes.
+Database settings are stored in a custom DataAsset.
+
 ## Sqlite3 version
 This plugin contains the Sqlite amalgamation embedded into the Sqlite3 module.
 

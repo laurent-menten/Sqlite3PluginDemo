@@ -7,75 +7,74 @@
 #include "SqliteText.h"
 #include "SqliteBlob.h"
 #include "SqliteNull.h"
-
 #include "Sqlite3Log.h"
-#include "Sqlite3Subsystem.h"
+
+// ---------------------------------------------------------------------------
+// - 
+// ---------------------------------------------------------------------------
 
 // Blueprint
-USqliteDatabase* USqliteStatement::GetDatabase()
+USqliteDatabase* USqliteStatement::GetDatabase() const
 {
 	return Database.Get();
 }
 
-// Blueprint
-int USqliteStatement::Step()
+// ---------------------------------------------------------------------------
+// - 
+// ---------------------------------------------------------------------------
+
+int USqliteStatement::Step() const
 {
-	int rc = sqlite3_step(StatementHandler);
-	if (rc == SQLITE_ROW)
+	const int rc = sqlite3_step( StatementHandler );
+	if( (rc != SQLITE_ROW) && (rc != SQLITE_DONE) )
 	{
-		UE_LOG(LogSqlite, Log, TEXT("Step = row"));
-	}
-	else if (rc == SQLITE_DONE)
-	{
-		UE_LOG(LogSqlite, Log, TEXT("Step = done"));
-	}
-	else
-	{
-		UE_LOG(LogSqlite, Log, TEXT("Step = (%d) %s"), rc, *USqliteStatics::NativeErrorString(rc));
+		UE_LOG( LogSqlite, Error, TEXT("USqliteStatement::Step = (%d) %s"), rc, *USqliteStatics::NativeErrorString( rc ) );
 	}
 
 	return rc;
 }
 
-// Blueprint
 int USqliteStatement::Finalize()
 {
 	UE_LOG( LogSqlite, Log, TEXT( "Finalize" ) );
 
-	int rc = sqlite3_finalize( StatementHandler );
+	const int rc = sqlite3_finalize( StatementHandler );
 	if( rc == SQLITE_OK )
 	{
 		Database->StatementFinalized( this );
 	}
+	else
+	{
+		UE_LOG( LogSqlite, Error, TEXT("USqliteStatement::Finalize = (%d) %s"), rc, *USqliteStatics::NativeErrorString( rc ) );
+	}
 	
 	return rc;
-}
-
-// Blueprint
-int USqliteStatement::ClearBindings()
-{
-	return sqlite3_clear_bindings( StatementHandler );
-}
-
-// Blueprint
-int USqliteStatement::Reset()
-{
-	return sqlite3_reset( StatementHandler );
-}
-
-// Blueprint
-int USqliteStatement::GetBindParameterCount()
-{
-	return sqlite3_bind_parameter_count( StatementHandler );
 }
 
 // ---------------------------------------------------------------------------
 // - Parameters binding ------------------------------------------------------
 // ---------------------------------------------------------------------------
 
-int USqliteStatement::GetBindParameterIndex( ESqliteDatabaseSimpleExecutionPins& Branch, FString ColumnName )
+int USqliteStatement::ClearBindings()
 {
-	int ColumnIndex = sqlite3_bind_parameter_index( StatementHandler, StringCast<ANSICHAR>( *ColumnName ).Get() );
+	return sqlite3_clear_bindings( StatementHandler );
+}
+
+int USqliteStatement::Reset() const
+{
+	return sqlite3_reset( StatementHandler );
+}
+
+int USqliteStatement::GetBindParameterCount() const
+{
+	return sqlite3_bind_parameter_count( StatementHandler );
+}
+
+// ---------------------------------------------------------------------------
+
+int USqliteStatement::GetBindParameterIndex( ESqliteDatabaseSimpleExecutionPins& Branch, const FString ColumnName )
+{
+	const int ColumnIndex = sqlite3_bind_parameter_index( StatementHandler, StringCast<ANSICHAR>( *ColumnName ).Get() );
 	if( ColumnIndex == 0 )
 	{
 		Branch = ESqliteDatabaseSimpleExecutionPins::OnFail;
@@ -86,7 +85,7 @@ int USqliteStatement::GetBindParameterIndex( ESqliteDatabaseSimpleExecutionPins&
 	return ColumnIndex;
 }
 
-FString USqliteStatement::GetBindParameterName( ESqliteDatabaseSimpleExecutionPins& Branch, int ColumnIndex )
+FString USqliteStatement::GetBindParameterName( ESqliteDatabaseSimpleExecutionPins& Branch, const int ColumnIndex )
 {
 	const char* ColumnName = sqlite3_bind_parameter_name( StatementHandler, ColumnIndex );
 	if( ColumnName == nullptr )
@@ -101,12 +100,12 @@ FString USqliteStatement::GetBindParameterName( ESqliteDatabaseSimpleExecutionPi
 
 // ---------------------------------------------------------------------------
 
-int USqliteStatement::BindDouble(ESqliteDatabaseSimpleExecutionPins& Branch, int ColumnIndex, double Value, USqliteStatement*& Statement)
+int USqliteStatement::BindDouble( ESqliteDatabaseSimpleExecutionPins& Branch, const int ColumnIndex, const double Value, USqliteStatement*& Statement )
 {
-	UE_LOG(LogSqlite, Log, TEXT("Binding float value %f to columne %d"), Value, ColumnIndex);
+	UE_LOG( LogSqlite, Log, TEXT("Binding float value %f to columne %d"), Value, ColumnIndex );
 
-	int rc = sqlite3_bind_double(StatementHandler, ColumnIndex, Value);
-	if (rc != SQLITE_OK)
+	const int rc = sqlite3_bind_double( StatementHandler, ColumnIndex, Value );
+	if( rc != SQLITE_OK )
 	{
 		Branch = ESqliteDatabaseSimpleExecutionPins::OnFail;
 	}
@@ -119,12 +118,12 @@ int USqliteStatement::BindDouble(ESqliteDatabaseSimpleExecutionPins& Branch, int
 	return rc;
 }
 
-int USqliteStatement::BindInteger(ESqliteDatabaseSimpleExecutionPins& Branch, int ColumnIndex, int Value, USqliteStatement*& Statement)
+int USqliteStatement::BindInteger( ESqliteDatabaseSimpleExecutionPins& Branch, const int ColumnIndex, const int Value, USqliteStatement*& Statement )
 {
-	UE_LOG(LogSqlite, Log, TEXT("Binding int value %d to columne %d"), Value, ColumnIndex);
+	UE_LOG( LogSqlite, Log, TEXT("Binding int value %d to columne %d"), Value, ColumnIndex );
 
-	int rc = sqlite3_bind_int(StatementHandler, ColumnIndex, Value);
-	if (rc != SQLITE_OK)
+	const int rc = sqlite3_bind_int( StatementHandler, ColumnIndex, Value );
+	if( rc != SQLITE_OK )
 	{
 		Branch = ESqliteDatabaseSimpleExecutionPins::OnFail;
 	}
@@ -137,12 +136,12 @@ int USqliteStatement::BindInteger(ESqliteDatabaseSimpleExecutionPins& Branch, in
 	return rc;
 }
 
-int USqliteStatement::BindInteger64(ESqliteDatabaseSimpleExecutionPins& Branch, int ColumnIndex, int64 Value, USqliteStatement*& Statement)
+int USqliteStatement::BindInteger64(ESqliteDatabaseSimpleExecutionPins& Branch, const int ColumnIndex, const int64 Value, USqliteStatement*& Statement )
 {
-	UE_LOG(LogSqlite, Log, TEXT("Binding int64 value %ld to columne %d"), Value, ColumnIndex);
+	UE_LOG( LogSqlite, Log, TEXT("Binding int64 value %lld to columne %d"), Value, ColumnIndex );
 
-	int rc = sqlite3_bind_int64(StatementHandler, ColumnIndex, Value);
-	if (rc != SQLITE_OK)
+	const int rc = sqlite3_bind_int64( StatementHandler, ColumnIndex, Value );
+	if( rc != SQLITE_OK )
 	{
 		Branch = ESqliteDatabaseSimpleExecutionPins::OnFail;
 	}
@@ -155,12 +154,12 @@ int USqliteStatement::BindInteger64(ESqliteDatabaseSimpleExecutionPins& Branch, 
 	return rc;
 }
 
-int USqliteStatement::BindText( ESqliteDatabaseSimpleExecutionPins& Branch, int ColumnIndex, FString Value, USqliteStatement*& Statement)
+int USqliteStatement::BindText( ESqliteDatabaseSimpleExecutionPins& Branch, const int ColumnIndex, const FString Value, USqliteStatement*& Statement )
 {
-	UE_LOG( LogSqlite, Log, TEXT("Binding text value \"%s\" to columne %d"), *Value, ColumnIndex);
+	UE_LOG( LogSqlite, Log, TEXT("Binding text value \"%s\" to columne %d"), *Value, ColumnIndex );
 
-	int rc = sqlite3_bind_text(StatementHandler, ColumnIndex, StringCast<ANSICHAR>(*Value).Get(), -1, SQLITE_TRANSIENT );
-	if (rc != SQLITE_OK)
+	const int rc = sqlite3_bind_text( StatementHandler, ColumnIndex, StringCast<ANSICHAR>(*Value).Get(), -1, SQLITE_TRANSIENT );
+	if( rc != SQLITE_OK )
 	{
 		Branch = ESqliteDatabaseSimpleExecutionPins::OnFail;
 	}
@@ -173,20 +172,12 @@ int USqliteStatement::BindText( ESqliteDatabaseSimpleExecutionPins& Branch, int 
 	return rc;
 }
 
-/*
-int USqliteStatement::BindText( int ColumnIndex, const char* Value, int Length)
+int USqliteStatement::BindNull( ESqliteDatabaseSimpleExecutionPins& Branch, const int ColumnIndex, USqliteStatement*& Statement )
 {
-	int rc = sqlite3_bind_text(StatementHandler, ColumnIndex, Value, Length, nullptr);
-	return rc;
-}
-*/
+	UE_LOG( LogSqlite, Log, TEXT("Binding NULL value to columne %d"), ColumnIndex );
 
-int USqliteStatement::BindNull(ESqliteDatabaseSimpleExecutionPins& Branch, int ColumnIndex, USqliteStatement*& Statement)
-{
-	UE_LOG(LogSqlite, Log, TEXT("Binding NULL value to columne %d"), ColumnIndex);
-
-	int rc = sqlite3_bind_null(StatementHandler, ColumnIndex);
-	if (rc != SQLITE_OK)
+	const int rc = sqlite3_bind_null( StatementHandler, ColumnIndex );
+	if( rc != SQLITE_OK )
 	{
 		Branch = ESqliteDatabaseSimpleExecutionPins::OnFail;
 	}
@@ -199,12 +190,12 @@ int USqliteStatement::BindNull(ESqliteDatabaseSimpleExecutionPins& Branch, int C
 	return rc;
 }
 
-int USqliteStatement::BindZeroBlob(ESqliteDatabaseSimpleExecutionPins& Branch, int ColumnIndex, int DataSize, USqliteStatement*& Statement)
+int USqliteStatement::BindZeroBlob( ESqliteDatabaseSimpleExecutionPins& Branch, const int ColumnIndex, const int DataSize, USqliteStatement*& Statement )
 {
-	UE_LOG(LogSqlite, Log, TEXT("Binding zero blob of size %d to columne %d"), DataSize, ColumnIndex);
+	UE_LOG( LogSqlite, Log, TEXT("Binding zero blob of size %d to columne %d"), DataSize, ColumnIndex );
 
-	int rc = sqlite3_bind_zeroblob(StatementHandler, ColumnIndex, DataSize);
-	if (rc != SQLITE_OK)
+	const int rc = sqlite3_bind_zeroblob( StatementHandler, ColumnIndex, DataSize );
+	if( rc != SQLITE_OK )
 	{
 		Branch = ESqliteDatabaseSimpleExecutionPins::OnFail;
 	}
@@ -217,12 +208,12 @@ int USqliteStatement::BindZeroBlob(ESqliteDatabaseSimpleExecutionPins& Branch, i
 	return rc;
 }
 
-int USqliteStatement::BindZeroBlob64(ESqliteDatabaseSimpleExecutionPins& Branch, int ColumnIndex, int64 DataSize, USqliteStatement*& Statement)
+int USqliteStatement::BindZeroBlob64( ESqliteDatabaseSimpleExecutionPins& Branch, const int ColumnIndex, const int64 DataSize, USqliteStatement*& Statement )
 {
-	UE_LOG(LogSqlite, Log, TEXT("Binding zero blob (64) of size %d to columne %d"), DataSize, ColumnIndex);
+	UE_LOG( LogSqlite, Log, TEXT("Binding zero blob (64) of size %lld to columne %d"), DataSize, ColumnIndex );
 
-	int rc = sqlite3_bind_zeroblob64(StatementHandler, ColumnIndex, DataSize);
-	if (rc != SQLITE_OK)
+	const int rc = sqlite3_bind_zeroblob64( StatementHandler, ColumnIndex, DataSize );
+	if( rc != SQLITE_OK )
 	{
 		Branch = ESqliteDatabaseSimpleExecutionPins::OnFail;
 	}
@@ -239,17 +230,19 @@ int USqliteStatement::BindZeroBlob64(ESqliteDatabaseSimpleExecutionPins& Branch,
 // - Result columns ----------------------------------------------------------
 // ---------------------------------------------------------------------------
 
-int USqliteStatement::GetColumnCount()
+int USqliteStatement::GetColumnCount() const
 {
 	return sqlite3_column_count( StatementHandler );
 }
 
-int USqliteStatement::GetDataCount()
+int USqliteStatement::GetDataCount() const
 {
 	return sqlite3_data_count( StatementHandler );
 }
 
-FString USqliteStatement::GetColumnName( ESqliteDatabaseSimpleExecutionPins& Branch, int ColumnIndex )
+// ---------------------------------------------------------------------------
+
+FString USqliteStatement::GetColumnName( ESqliteDatabaseSimpleExecutionPins& Branch, const int ColumnIndex ) const
 {
 	const char* ColumnName = sqlite3_column_name( StatementHandler, ColumnIndex );
 	if( ColumnName == nullptr )
@@ -262,7 +255,7 @@ FString USqliteStatement::GetColumnName( ESqliteDatabaseSimpleExecutionPins& Bra
 	return FString( ColumnName );
 }
 
-FString USqliteStatement::GetColumnDatabaseName( ESqliteDatabaseSimpleExecutionPins& Branch, int ColumnIndex )
+FString USqliteStatement::GetColumnDatabaseName( ESqliteDatabaseSimpleExecutionPins& Branch, const int ColumnIndex ) const
 {
 	const char* ColumnName = sqlite3_column_database_name( StatementHandler, ColumnIndex );
 	if( ColumnName == nullptr )
@@ -275,7 +268,7 @@ FString USqliteStatement::GetColumnDatabaseName( ESqliteDatabaseSimpleExecutionP
 	return FString( ColumnName );
 }
 
-FString USqliteStatement::GetColumnTableName( ESqliteDatabaseSimpleExecutionPins& Branch, int ColumnIndex )
+FString USqliteStatement::GetColumnTableName( ESqliteDatabaseSimpleExecutionPins& Branch, const int ColumnIndex ) const
 {
 	const char* ColumnName = sqlite3_column_table_name( StatementHandler, ColumnIndex );
 	if( ColumnName == nullptr )
@@ -288,7 +281,7 @@ FString USqliteStatement::GetColumnTableName( ESqliteDatabaseSimpleExecutionPins
 	return FString( ColumnName );
 }
 
-FString USqliteStatement::GetColumnOriginName( ESqliteDatabaseSimpleExecutionPins& Branch, int ColumnIndex )
+FString USqliteStatement::GetColumnOriginName( ESqliteDatabaseSimpleExecutionPins& Branch, const int ColumnIndex ) const
 {
 	const char* ColumnName = sqlite3_column_origin_name( StatementHandler, ColumnIndex );
 	if( ColumnName == nullptr )
@@ -301,10 +294,9 @@ FString USqliteStatement::GetColumnOriginName( ESqliteDatabaseSimpleExecutionPin
 	return FString( ColumnName );
 }
 
-ESqliteType USqliteStatement::GetColumnType( ESqliteDatabaseSimpleExecutionPins& Branch, int ColumnIndex )
+ESqliteType USqliteStatement::GetColumnType( ESqliteDatabaseSimpleExecutionPins& Branch, const int ColumnIndex ) const
 {
-	int  NativeColumnType = sqlite3_column_type( StatementHandler, ColumnIndex );
-	switch( NativeColumnType )
+	switch( sqlite3_column_type( StatementHandler, ColumnIndex ) )
 	{
 		case SQLITE_INTEGER:
 			Branch = ESqliteDatabaseSimpleExecutionPins::OnSuccess;
@@ -325,13 +317,14 @@ ESqliteType USqliteStatement::GetColumnType( ESqliteDatabaseSimpleExecutionPins&
 		case SQLITE_NULL:
 			Branch = ESqliteDatabaseSimpleExecutionPins::OnSuccess;
 			return ESqliteType::Null;
-	}
 
-	Branch = ESqliteDatabaseSimpleExecutionPins::OnFail;
-	return ESqliteType::None;
+		default:
+			Branch = ESqliteDatabaseSimpleExecutionPins::OnFail;
+			return ESqliteType::None;
+	}
 }
 
-FString USqliteStatement::GetColumnDeclaredType( ESqliteDatabaseSimpleExecutionPins& Branch, int ColumnIndex )
+FString USqliteStatement::GetColumnDeclaredType( ESqliteDatabaseSimpleExecutionPins& Branch, const int ColumnIndex ) const
 {
 	const char* ColumnDeclaredType = sqlite3_column_decltype( StatementHandler, ColumnIndex );
 	if( ColumnDeclaredType == nullptr )
@@ -344,62 +337,57 @@ FString USqliteStatement::GetColumnDeclaredType( ESqliteDatabaseSimpleExecutionP
 	return FString( ColumnDeclaredType );
 }
 
-// ============================================================================
-// = 
-// ============================================================================
+// ---------------------------------------------------------------------------
 
-int USqliteStatement::GetColumnAsInteger( int columnIndex )
+int USqliteStatement::GetColumnAsInteger( const int ColumnIndex ) const
 {
-	return sqlite3_column_int( StatementHandler, columnIndex );
+	return sqlite3_column_int( StatementHandler, ColumnIndex );
 }
 
-int64 USqliteStatement::GetColumnAsInteger64( int columnIndex )
+int64 USqliteStatement::GetColumnAsInteger64( const int ColumnIndex ) const
 {
-	return sqlite3_column_int64( StatementHandler, columnIndex );
+	return sqlite3_column_int64( StatementHandler, ColumnIndex );
 }
 
-double USqliteStatement::GetColumnAsDouble( int columnIndex )
+double USqliteStatement::GetColumnAsDouble( const int ColumnIndex ) const
 {
-	return sqlite3_column_double( StatementHandler, columnIndex );
+	return sqlite3_column_double( StatementHandler, ColumnIndex );
 }
 
-FString USqliteStatement::GetColumnAsString( int columnIndex )
+FString USqliteStatement::GetColumnAsString( const int ColumnIndex ) const
 {
-	return FString( (char*) sqlite3_column_text( StatementHandler, columnIndex ) );
+	return FString( (char*) sqlite3_column_text( StatementHandler, ColumnIndex ) );
 }
 
-// ============================================================================
-// = 
-// ============================================================================
+// ---------------------------------------------------------------------------
 
-const void* USqliteStatement::GetColumnAsBlob( int columnIndex )
+const void* USqliteStatement::GetColumnAsBlob( const int ColumnIndex ) const
 {
-	return sqlite3_column_blob( StatementHandler, columnIndex );
+	return sqlite3_column_blob( StatementHandler, ColumnIndex );
 }
 
-const unsigned char* USqliteStatement::GetColumnAsText( int columnIndex )
+const unsigned char* USqliteStatement::GetColumnAsText( const int ColumnIndex ) const
 {
-	return sqlite3_column_text( StatementHandler, columnIndex );
+	return sqlite3_column_text( StatementHandler, ColumnIndex );
 }
 
-int USqliteStatement::GetColumnBytes( int columnIndex )
+int USqliteStatement::GetColumnBytes( const int ColumnIndex ) const
 {
-	return sqlite3_column_bytes( StatementHandler, columnIndex );
+	return sqlite3_column_bytes( StatementHandler, ColumnIndex );
 }
 
-// ============================================================================
-// = 
-// ============================================================================
+// ---------------------------------------------------------------------------
+// - 
+// ---------------------------------------------------------------------------
 
-TArray<USqliteData*> USqliteStatement::GetResultSet()
+TArray<USqliteData*> USqliteStatement::GetResultSet() const
 {
 	TArray<USqliteData*> ResultSet;
 
-	int ColumnCount = sqlite3_column_count( StatementHandler );
+	const int ColumnCount = sqlite3_column_count( StatementHandler );
 	for( int ColumnIndex = 0; ColumnIndex < ColumnCount; ColumnIndex++ )
 	{
-		int DataType = sqlite3_column_type( StatementHandler, ColumnIndex );
-		switch( DataType )
+		switch( const int DataType = sqlite3_column_type( StatementHandler, ColumnIndex ) )
 		{
 			case SQLITE_INTEGER:
 			{
@@ -407,8 +395,8 @@ TArray<USqliteData*> USqliteStatement::GetResultSet()
 
 				IntegerData->Value = sqlite3_column_int64( StatementHandler, ColumnIndex );
 				ResultSet.Add( IntegerData );
+				break;
 			}
-			break;
 
 			case SQLITE_FLOAT:
 			{
@@ -417,8 +405,8 @@ TArray<USqliteData*> USqliteStatement::GetResultSet()
 				FloatData->Value = sqlite3_column_double( StatementHandler, ColumnIndex );
 
 				ResultSet.Add( FloatData );
+				break;
 			}
-			break;
 
 			case SQLITE_TEXT:
 			{
@@ -428,8 +416,8 @@ TArray<USqliteData*> USqliteStatement::GetResultSet()
 				TextData->Size = sqlite3_column_bytes( StatementHandler, ColumnIndex );
 
 				ResultSet.Add( TextData );
+				break;
 			}
-			break;
 
 			case SQLITE_BLOB:
 			{
@@ -439,47 +427,48 @@ TArray<USqliteData*> USqliteStatement::GetResultSet()
 				BlobData->Size = sqlite3_column_bytes( StatementHandler, ColumnIndex );
 
 				ResultSet.Add( BlobData );
+				break;
 			}
-			break;
 
 			case SQLITE_NULL:
 			{
 				USqliteNull* NullData = NewObject<USqliteNull>();
 
 				ResultSet.Add( NullData );
+				break;
 			}
-			break;
 
 			default:
-				UE_LOG( LogSqlite, Error, TEXT( "Unknown Sqlite data type %d" ), DataType );
+			{
+				UE_LOG( LogSqlite, Error, TEXT( "Unknown Sqlite data type [%d]" ), DataType );
 				break;
+			}
 		}
 	}
 
 	return ResultSet;
 }
 
-
 // ============================================================================
 // = 
 // ============================================================================
 
-bool USqliteStatement::IsBusy()
+bool USqliteStatement::IsBusy() const
 {
 	return sqlite3_stmt_busy( StatementHandler ) != 0;
 }
 
-bool USqliteStatement::IsExplain()
+bool USqliteStatement::IsExplain() const
 {
 	return sqlite3_stmt_isexplain( StatementHandler ) == 1;
 }
 
-bool USqliteStatement::IsReadOnly()
+bool USqliteStatement::IsReadOnly() const
 {
 	return sqlite3_stmt_readonly( StatementHandler ) != 0;
 }
 
-int USqliteStatement::GetStatementStatus( ESqliteStatementStatus Counter, bool ResetFlag )
+int USqliteStatement::GetStatementStatus( ESqliteStatementStatus Counter, const bool ResetFlag ) const
 {
-	return sqlite3_stmt_status( StatementHandler, static_cast<int>(Counter), ResetFlag );
+	return sqlite3_stmt_status( StatementHandler, StaticCast<int>(Counter), ResetFlag );
 }

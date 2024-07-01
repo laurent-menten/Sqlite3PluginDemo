@@ -176,6 +176,14 @@ bool USqliteStatics::CheckSqliteErrorCode( int NativeErrorCode, ESqliteErrorCode
 	return NativeErrorCode == UnmapNativeErrorCode( ErrorCode );
 }
 
+void USqliteStatics::BranchIfSqliteErrorCode( int NativeErrorCode, ESqliteErrorCode ErrorCode, ESqliteDatabaseEqualityExecutionPins& Branch )
+{
+	const bool rc =  CheckSqliteErrorCode( NativeErrorCode, ErrorCode );
+	Branch = rc ? ESqliteDatabaseEqualityExecutionPins::Equal : ESqliteDatabaseEqualityExecutionPins::NotEqual;
+}
+
+// ----------------------------------------------------------------------------
+
 ESqliteExtendedErrorCode USqliteStatics::MapNativeExtendedErrorCode( int ErrorCode )
 {
 	switch( ErrorCode )
@@ -472,6 +480,12 @@ bool USqliteStatics::CheckSqliteExtendedErrorCode( int NativeErrorCode, ESqliteE
 	return NativeErrorCode == UnmapNativeExtendedErrorCode( ErrorCode );
 }
 
+void USqliteStatics::BranchIfSqliteExtendedErrorCode( int NativeErrorCode, ESqliteExtendedErrorCode ErrorCode, ESqliteDatabaseEqualityExecutionPins& Branch )
+{
+	const bool rc =  CheckSqliteExtendedErrorCode( NativeErrorCode, ErrorCode );
+	Branch = rc ? ESqliteDatabaseEqualityExecutionPins::Equal : ESqliteDatabaseEqualityExecutionPins::NotEqual;
+}
+
 // ============================================================================
 // === 
 // ============================================================================
@@ -480,7 +494,6 @@ FString USqliteStatics::NativeErrorString( int ErrorCode )
 {
 	return FString( sqlite3_errstr( ErrorCode ) );
 }
-
 
 FString USqliteStatics::ErrorString( ESqliteErrorCode ErrorCode )
 {

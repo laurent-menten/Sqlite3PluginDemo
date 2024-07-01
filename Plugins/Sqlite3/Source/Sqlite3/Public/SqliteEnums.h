@@ -11,6 +11,13 @@
 // ============================================================================
 
 UENUM( BlueprintType )
+enum class ESqliteDatabaseEqualityExecutionPins : uint8
+{
+	Equal,
+	NotEqual
+};
+
+UENUM( BlueprintType )
 enum class ESqliteDatabaseSimpleExecutionPins : uint8
 {
 	OnSuccess,
