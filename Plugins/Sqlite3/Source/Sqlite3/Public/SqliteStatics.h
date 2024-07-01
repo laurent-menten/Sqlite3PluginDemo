@@ -111,10 +111,10 @@ public:
 	 * @param ErrorCode - An ESqlite[Extended]ErrorCode enum value
 	 * @return The text that describes the error
 	 */
-	UFUNCTION( BlueprintCallable, Category = "Sqlite3|Utils" )
+	UFUNCTION( BlueprintCallable, BlueprintPure, Category = "Sqlite3|Utils" )
 	static FString ErrorString( ESqliteErrorCode ErrorCode );
 
-	UFUNCTION( BlueprintCallable, Category = "Sqlite3|Utils" )
+	UFUNCTION( BlueprintCallable, BlueprintPure, Category = "Sqlite3|Utils" )
 	static FString ExtendedErrorString( ESqliteExtendedErrorCode ErrorCode );
 
 	/**
