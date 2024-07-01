@@ -1,0 +1,22 @@
+{
+	"FileVersion": 3,
+	"EngineAssociation": "{765F5AA5-4ECA-8B2B-6852-F1AC69036BD4}",
+	"Category": "",
+	"Description": "",
+	"Modules": [
+		{
+			"Name": "Sqlite3PluginDemo",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	],
+	"Plugins": [
+		{
+			"Name": "ModelingToolsEditorMode",
+			"Enabled": true,
+			"TargetAllowList": [
+				"Editor"
+			]
+		}
+	]
+}
