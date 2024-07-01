@@ -31,6 +31,7 @@ class SQLITE3_API USqliteDatabase : public UObject
 	GENERATED_BODY()
 
 	friend class USqlite3Subsystem;
+	friend class USqliteStatement;
 	friend class USqliteStatics;
 
 private:
@@ -39,9 +40,10 @@ private:
 	// ---------------------------------------------------------------------------
 
 	/**
-	 * The database asset.
+	 * The DatabaseInfo asset.
 	 */
-	TObjectPtr<USqliteDatabaseInfo> DatabaseInfosAsset;
+	UPROPERTY()
+	TObjectPtr<USqliteDatabaseInfo> DatabaseInfoAsset;
 
 	/**
 	 * The actual path of the database.
@@ -64,6 +66,11 @@ private:
 
 	sqlite3* DatabaseConnectionHandler = nullptr;
 
+	UPROPERTY()
+	TArray<USqliteStatement*> ActiveStatements;
+
+	void StatementFinalized( USqliteStatement* Statement );
+	
 	bool bIsInitialized = false;
 	bool bIsOpen = false;
 
@@ -76,38 +83,37 @@ private:
 
 	// ---------------------------------------------------------------------------
 
-	static const FString SQL_BeginTransaction;
-	static const FString SQL_Commit;
-	static const FString SQL_Rollback;
+	static const FString Sql_BeginTransaction;
+	static const FString Sql_Commit;
+	static const FString Sql_Rollback;
 
 	static const FName PN_DatabaseName;
 	static const FName PN_SchemaName;
 
-	static const FString SQL_AttachDatabase;
-	static const FString SQL_DetachDatabase;
+	static const FString Sql_AttachDatabase;
+	static const FString Sql_DetachDatabase;
 
-	static const FString SQL_ListSchemas;
-	static const FString SQL_SchemaExists;
+	static const FString Sql_ListSchemas;
+	static const FString Sql_SchemaExists;
 
 	static const FName TN_StoredStatements;
-	static const FName PN_SchemaName;
-	static const FString SQL_CreateStoredStatements;
+	static const FString Sql_CreateStoredStatements;
 
 	static const FName TN_Properties;
-	static const FString SQL_CreateProperties;
+	static const FString Sql_CreateProperties;
 
 	static const FName TN_ActorsStore;
-	static const FString SQL_CreateActorsStore;
+	static const FString Sql_CreateActorsStore;
 
 	static const FName TN_Log;
-	static const FString SQL_CreateLog;
+	static const FString Sql_CreateLog;
 
 	// ---------------------------------------------------------------------------
 
 	/**
-	 * Note: DatabaseInfos asset has been validated by editor.
+	 * Note: DatabaseInfo asset has been validated by editor.
 	 */
-	void Initialize( const USqliteDatabaseInfo* DatabaseInfos );
+	void Initialize( const USqliteDatabaseInfo* DatabaseInfo );
 
 	/**
 	 *
@@ -117,7 +123,7 @@ private:
 	/**
 	 * Create a table.
 	 */
-	bool CreateTable( FName TableName, FString Sql );
+	bool CreateTable( FName TableName, FString Sql ) const;
 
 	// ===========================================================================
 	// = 
@@ -260,38 +266,38 @@ public:
 	 * Read the application_id from the database.
 	 *
 	 * @param Branch - Upon return, will determine the execution pin
-	 * @param ApplicationId - Where to store the application_id from the database
+	 * @param OutApplicationId - Where to store the application_id from the database
 	 */
 	UFUNCTION( BlueprintCallable, Category = "Sqlite3|Version", meta = (ExpandEnumAsExecs = "Branch"))
-	void GetApplicationId( ESqliteDatabaseSimpleExecutionPins& Branch, int& ApplicationId );
+	void GetApplicationId( ESqliteDatabaseSimpleExecutionPins& Branch, int& OutApplicationId );
 
 	/**
 	 * (C++ version)
 	 * Read the application_id from the database.
 	 *
-	 * @param ApplicationId - Where to store the application_id from the database
+	 * @param OutApplicationId - Where to store the application_id from the database
 	 * @return True if operation succeeded
 	 */
-	bool GetApplicationId( int& ApplicationId );
+	bool GetApplicationId( int& OutApplicationId ) const;
 
 	/**
 	 * (Blueprint version)
 	 * Read the user_version from the database.
 	 * 
 	 * @param Branch - Upon return, will determine the execution pin
-	 * @param UserVersion - Where to store the user_version from the database
+	 * @param OutUserVersion - Where to store the user_version from the database
 	 */
 	UFUNCTION( BlueprintCallable, Category = "Sqlite3|Version", meta = (ExpandEnumAsExecs = "Branch") )
-	void GetUserVersion( ESqliteDatabaseSimpleExecutionPins& Branch, int& UserVersion );
+	void GetUserVersion( ESqliteDatabaseSimpleExecutionPins& Branch, int& OutUserVersion );
 
 	/**
 	 * (C++ version)
 	 * Read the user_version from the database.
 	 *
-	 * @param UserVersion - Where to store the user_version from the database
+	 * @param OutUserVersion - Where to store the user_version from the database
 	 * @return True if operation succeeded
 	 */
-	bool GetUserVersion( int& UserVersion );
+	bool GetUserVersion( int& OutUserVersion ) const;
 
 #pragma endregion
 
@@ -378,7 +384,7 @@ public:
 
 	bool IsOpen();
 
-	FString GetDatabaseFileName();
+	FString GetDatabaseFileName() const;
 
 	FString GetDatabaseFilePath();
 
@@ -392,7 +398,7 @@ public:
 	UFUNCTION( BlueprintCallable, Category = "Sqlite3|Database" )
 	ESqliteErrorCode GetLastErrorCode();
 
-	int GetLastErrorCodeCxx();
+	int GetLastErrorCodeCxx() const;
 
 	// ===========================================================================
 	// = 

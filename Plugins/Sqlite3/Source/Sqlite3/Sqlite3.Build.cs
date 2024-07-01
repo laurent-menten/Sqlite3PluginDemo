@@ -167,10 +167,10 @@ public class Sqlite3 : ModuleRules
         // Enable Sqlite debug checks?
         //PrivateDefinitions.Add("SQLITE_DEBUG");
 
-        // The embedded Sqlite implementation generates a lot of these warnings
+        // The platform Sqlite implementation generates a lot of these warnings
         bEnableUndefinedIdentifierWarnings = false;
 
-        // Ensure the embedded Sqlite implementation is always compiled in isolation
+        // Ensure the platform Sqlite implementation is always compiled in isolation
         bUseUnity = false;
     }
 }

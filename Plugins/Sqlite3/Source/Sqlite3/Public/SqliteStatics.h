@@ -25,43 +25,47 @@ public:
 	/**
 	 * Create a USqliteDatabase object.
 	 *
-	 * @param DatabaseInfos - Asset of type USqliteDatabaseInfos describing the database connection
+	 * @param DatabaseInfo - Asset of type USqliteDatabaseInfos describing the database connection
 	 * @param Branch (out) - Upon return, will determine the execution pin
 	 * @param ReturnCode (out) - The return code explaining the failure
 	 * @param DatabaseHandle (out) - A pointer to the USqliteDatabase on success or null
 	 */
-	UFUNCTION( BlueprintCallable, Category = "Sqlite3|Database", meta = (ExpandEnumAsExecs = "Branch", DisplayName = "Create Sqlite Database Object from DatabaseInfos asset") )
+	
+	UFUNCTION( BlueprintCallable, Category = "Sqlite3|Database", meta = (ExpandEnumAsExecs = "Branch", DisplayName = "Create Sqlite3 Database Object from DatabaseInfo asset") )
 	static void CreateSqliteDatabaseObject_Asset(
-		const USqliteDatabaseInfo* DatabaseInfos,
+		const USqliteDatabaseInfo* DatabaseInfo,
 		ESqliteDatabaseSimpleExecutionPins& Branch,
 		ESqliteErrorCode& ReturnCode,
 		UPARAM(DisplayName = "Database") USqliteDatabase* & DatabaseHandle
 	);
 
 	// ---------------------------------------------------------------------------
-	// - 
+	// - Library version ---------------------------------------------------------
 	// ---------------------------------------------------------------------------
 
 	/**
 	 *
 	 */
-	UFUNCTION( BlueprintCallable, Category = "Sqlite3|Version|Library" )
+	
+	UFUNCTION( BlueprintCallable, BlueprintPure, Category = "Sqlite3|Library|Version" )
 	static FString LibVersion();
 
 	/**
 	 *
 	 */
-	UFUNCTION( BlueprintCallable, Category = "Sqlite3|Version|Library" )
+	
+	UFUNCTION( BlueprintCallable, BlueprintPure, Category = "Sqlite3|Library|Version" )
 	static int LibVersionNumber();
 
 	/**
 	 *
 	 */
-	UFUNCTION( BlueprintCallable, Category = "Sqlite3|Version|Library" )
+	
+	UFUNCTION( BlueprintCallable, BlueprintPure, Category = "Sqlite3|Library|Version" )
 	static FString LibSourceId();
 
 	// ---------------------------------------------------------------------------
-	// - 
+	// - Config ------------------------------------------------------------------
 	// ---------------------------------------------------------------------------
 
 	/**
@@ -69,11 +73,12 @@ public:
 	 * 1: Mutex code compiled in, serialized mode by default.
 	 * 2: Mutex code compiled in, multi-thread mode by default.
 	 */
-	UFUNCTION( BlueprintCallable, Category = "Sqlite3|Config" )
+	
+	UFUNCTION( BlueprintCallable, BlueprintPure, Category = "Sqlite3|Library|Config" )
 	static int IsThreadSafe();
 
 	// ---------------------------------------------------------------------------
-	// - 
+	// - Error codes -------------------------------------------------------------
 	// ---------------------------------------------------------------------------
 
 	/**
@@ -82,7 +87,11 @@ public:
 	 * @param ErrorCode - A native Sqlite error code
 	 * @return The corresponding value from the ESqlite[Extended]ErrorCode enum
 	 */
+	
+	UFUNCTION( BlueprintCallable, BlueprintPure, Category = "Sqlite3|Errors" )
 	static ESqliteErrorCode MapNativeErrorCode( int ErrorCode );
+
+	UFUNCTION( BlueprintCallable, BlueprintPure, Category = "Sqlite3|Errors" )
 	static ESqliteExtendedErrorCode MapNativeExtendedErrorCode( int ErrorCode );
 
 	/**
@@ -91,8 +100,11 @@ public:
 	 * @param ErrorCode - An ESqlite[Extended]ErrorCode enum value
 	 * @return The corresponding native Sqlite error code
 	 */
+	
+	UFUNCTION( BlueprintCallable, BlueprintPure, Category = "Sqlite3|Errors" )
 	static int UnmapNativeErrorCode( ESqliteErrorCode ErrorCode );
 
+	UFUNCTION( BlueprintCallable, BlueprintPure, Category = "Sqlite3|Errors" )
 	static int UnmapNativeExtendedErrorCode( ESqliteExtendedErrorCode ErrorCode );
 
 	/**
@@ -102,7 +114,9 @@ public:
 	 * @param ErrorCode - A native Sqlite error code
 	 * @return The text that describes the error
 	 */
-	static FString NativeErrorString(int ErrorCode);
+
+	UFUNCTION( BlueprintCallable, BlueprintPure, Category = "Sqlite3|Errors" )
+	static FString NativeErrorString( int ErrorCode );
 
 	/**
 	 * Get the English-language text that describes the error.
@@ -111,10 +125,11 @@ public:
 	 * @param ErrorCode - An ESqlite[Extended]ErrorCode enum value
 	 * @return The text that describes the error
 	 */
-	UFUNCTION( BlueprintCallable, BlueprintPure, Category = "Sqlite3|Utils" )
+
+	UFUNCTION( BlueprintCallable, BlueprintPure, Category = "Sqlite3|Errors" )
 	static FString ErrorString( ESqliteErrorCode ErrorCode );
 
-	UFUNCTION( BlueprintCallable, BlueprintPure, Category = "Sqlite3|Utils" )
+	UFUNCTION( BlueprintCallable, BlueprintPure, Category = "Sqlite3|Errors" )
 	static FString ExtendedErrorString( ESqliteExtendedErrorCode ErrorCode );
 
 	/**
@@ -122,13 +137,13 @@ public:
 	 * 
 	 * @param NativeErrorCode - A native Sqlite error code
 	 * @param ErrorCode - An ESqlite[Extended]ErrorCode enum value
-	 * @return true if valid
+	 * @return true if same
 	 */
 
-	UFUNCTION( BlueprintCallable, BlueprintPure, Category = "Sqlite3|Utils" )
+	UFUNCTION( BlueprintCallable, BlueprintPure, Category = "Sqlite3|Errors" )
 	static bool CheckSqliteErrorCode( int NativeErrorCode, ESqliteErrorCode ErrorCode );
 
-	UFUNCTION( BlueprintCallable, BlueprintPure, Category = "Sqlite3|Utils" )
+	UFUNCTION( BlueprintCallable, BlueprintPure, Category = "Sqlite3|Errors" )
 	static bool CheckSqliteExtendedErrorCode( int NativeErrorCode, ESqliteExtendedErrorCode ErrorCode );
 
 };

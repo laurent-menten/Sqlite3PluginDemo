@@ -74,8 +74,9 @@ void UK2Node_Step::AllocateDefaultPins()
 	// ---------------------------------------------------------------------------
 
 	const auto FinalizePin = CreatePin( EGPD_Input, UEdGraphSchema_K2::PC_Boolean, PN_Finalize );
-	FinalizePin->PinFriendlyName = LOCTEXT( "FinalizePin_FriendlyName", "Finalize" );
-	K2Utils::SetPinToolTip( FinalizePin, LOCTEXT( "FinalizePin_Tooltip", "Finalize statement when done" ) );
+	FinalizePin->PinFriendlyName = LOCTEXT( "FinalizePin_FriendlyName", "Auto Finalize" );
+	FinalizePin->DefaultValue = FString("true");
+	K2Utils::SetPinToolTip( FinalizePin, LOCTEXT( "FinalizePin_Tooltip", "Automaticaly finalize statement when done" ) );
 
 	// ---------------------------------------------------------------------------
 	// - Break input pin ---------------------------------------------------------
@@ -244,7 +245,6 @@ void UK2Node_Step::ExpandNode( FKismetCompilerContext& CompilerContext, UEdGraph
 	const auto AssignBreakVariableFromBreak_Exec = AssignBreakVariableFromBreak->GetExecPin();
 	const auto AssignBreakVariableFromBreak_Variable = AssignBreakVariableFromBreak->GetVariablePin();
 	const auto AssignBreakVariableFromBreak_Value = AssignBreakVariableFromBreak->GetValuePin();
-	const auto AssignBreakVariableFromBreak_Then = AssignBreakVariableFromBreak->GetThenPin();
 
 	CompilerContext.MovePinLinksToIntermediate( *BreakPin, *AssignBreakVariableFromBreak_Exec );
 	K2Schema->TryCreateConnection( AssignBreakVariableFromBreak_Variable, BreakVariable_Variable );

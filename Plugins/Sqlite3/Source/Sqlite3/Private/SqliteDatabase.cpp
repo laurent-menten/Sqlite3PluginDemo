@@ -20,17 +20,17 @@
 // === 
 // ============================================================================
 
-// Note: DatabaseInfos asset has already been validated in editor.
+// Note: DatabaseInfo asset has already been validated in editor.
 
-void USqliteDatabase::Initialize( const USqliteDatabaseInfo* DatabaseInfos )
+void USqliteDatabase::Initialize( const USqliteDatabaseInfo* DatabaseInfo )
 {
 	UE_LOG( LogSqlite, Log, TEXT("%08.8p USqliteDatabase::%s( %08.8p [%s] )"),
 		this,
 		*FString( __func__ ),
-		DatabaseInfos,
-		*DatabaseInfos->DatabaseFileName );
+		DatabaseInfo,
+		*DatabaseInfo->DatabaseFileName );
 
-	DatabaseInfosAsset = (USqliteDatabaseInfo *) DatabaseInfos;
+	DatabaseInfoAsset = const_cast<USqliteDatabaseInfo*>(DatabaseInfo);
 
 	// ---------------------------------------------------------------------------
 	// - Compute open flags ------------------------------------------------------
@@ -38,7 +38,7 @@ void USqliteDatabase::Initialize( const USqliteDatabaseInfo* DatabaseInfos )
 
 	OpenFlags = 0;
 
-	switch( DatabaseInfosAsset->OpenMode )
+	switch( DatabaseInfoAsset->OpenMode )
 	{
 		case ESqliteDatabaseOpenMode::READ_ONLY:
 			OpenFlags = SQLITE_OPEN_READONLY;
@@ -53,19 +53,19 @@ void USqliteDatabase::Initialize( const USqliteDatabaseInfo* DatabaseInfos )
 			break;
 	}
 
-	if( DatabaseInfosAsset->bOpenAsURI )
+	if( DatabaseInfoAsset->bOpenAsURI )
 	{
 		OpenFlags |= SQLITE_OPEN_URI;
 	}
 
-	if( DatabaseInfosAsset->bInMemory )
+	if( DatabaseInfoAsset->bInMemory )
 	{
 		OpenFlags |= SQLITE_OPEN_MEMORY;
 	}
 
-	if( DatabaseInfosAsset->ThreadingMode != ESqliteDatabaseThreadingMode::UNSET )
+	if( DatabaseInfoAsset->ThreadingMode != ESqliteDatabaseThreadingMode::UNSET )
 	{
-		switch( DatabaseInfosAsset->ThreadingMode )
+		switch( DatabaseInfoAsset->ThreadingMode )
 		{
 			case ESqliteDatabaseThreadingMode::NO_MUTEX:
 				OpenFlags |= SQLITE_OPEN_NOMUTEX;
@@ -77,9 +77,9 @@ void USqliteDatabase::Initialize( const USqliteDatabaseInfo* DatabaseInfos )
 		}
 	}
 
-	if( DatabaseInfosAsset->CacheMode != ESqliteDatabaseCacheMode::UNSET )
+	if( DatabaseInfoAsset->CacheMode != ESqliteDatabaseCacheMode::UNSET )
 	{
-		switch( DatabaseInfosAsset->CacheMode )
+		switch( DatabaseInfoAsset->CacheMode )
 		{
 			case ESqliteDatabaseCacheMode::SHARED_CACHE:
 				OpenFlags |= SQLITE_OPEN_SHAREDCACHE;
@@ -91,12 +91,12 @@ void USqliteDatabase::Initialize( const USqliteDatabaseInfo* DatabaseInfos )
 		}
 	}
 
-	if( DatabaseInfosAsset->bUseExtendedResultCode )
+	if( DatabaseInfoAsset->bUseExtendedResultCode )
 	{
 		OpenFlags |= SQLITE_OPEN_EXRESCODE;
 	}
 
-	if( DatabaseInfosAsset->bNoFollow )
+	if( DatabaseInfoAsset->bNoFollow )
 	{
 		OpenFlags |= SQLITE_OPEN_NOFOLLOW;
 	}
@@ -107,18 +107,18 @@ void USqliteDatabase::Initialize( const USqliteDatabaseInfo* DatabaseInfos )
 
 	FString DatabaseDirectory;
 
-	if( !DatabaseInfosAsset->DatabaseFileName.Compare( ":memory:", ESearchCase::IgnoreCase )
-		|| (!DatabaseInfosAsset->bInMemory && !DatabaseInfosAsset->bOpenAsURI) )
+	if( !DatabaseInfoAsset->DatabaseFileName.Compare( ":memory:", ESearchCase::IgnoreCase )
+		|| (!DatabaseInfoAsset->bInMemory && !DatabaseInfoAsset->bOpenAsURI) )
 	{
-		if( !DatabaseInfosAsset->DatabaseDirectoryOverride.Path.IsEmpty() )
+		if( !DatabaseInfoAsset->DatabaseDirectoryOverride.Path.IsEmpty() )
 		{
-			if( !DatabaseInfosAsset->DatabaseDirectoryOverride.Path.EndsWith( "/" ) )
+			if( !DatabaseInfoAsset->DatabaseDirectoryOverride.Path.EndsWith( "/" ) )
 			{
-				DatabaseDirectory = DatabaseInfosAsset->DatabaseDirectoryOverride.Path.Append( "/" );
+				DatabaseDirectory = DatabaseInfoAsset->DatabaseDirectoryOverride.Path.Append( "/" );
 			}
 			else
 			{
-				DatabaseDirectory = DatabaseInfosAsset->DatabaseDirectoryOverride.Path;
+				DatabaseDirectory = DatabaseInfoAsset->DatabaseDirectoryOverride.Path;
 			}
 		}
 		else
@@ -126,9 +126,9 @@ void USqliteDatabase::Initialize( const USqliteDatabaseInfo* DatabaseInfos )
 			DatabaseDirectory = USqlite3Subsystem::GetInstance()->GetDefaultDatabaseDirectory();
 		}
 
-		DatabaseFilePath = DatabaseDirectory + DatabaseInfosAsset->DatabaseFileName;
+		DatabaseFilePath = DatabaseDirectory + DatabaseInfoAsset->DatabaseFileName;
 
-		if( DatabaseInfosAsset->bDeleteFileBeforeOpen )
+		if( DatabaseInfoAsset->bDeleteFileBeforeOpen )
 		{
 			UE_LOG( LogSqlite, Log, TEXT("Attempting to delete file '%s'"), *DatabaseFilePath );
 
@@ -141,14 +141,14 @@ void USqliteDatabase::Initialize( const USqliteDatabaseInfo* DatabaseInfos )
 	}
 	else
 	{
-		DatabaseFilePath = DatabaseInfosAsset->DatabaseFileName;
+		DatabaseFilePath = DatabaseInfoAsset->DatabaseFileName;
 	}
 
 	// ---------------------------------------------------------------------------
 	// - Compute attachments -----------------------------------------------------
 	// ---------------------------------------------------------------------------
 
-	for( const auto& Attachment : DatabaseInfosAsset->Attachments )
+	for( const auto& Attachment : DatabaseInfoAsset->Attachments )
 	{
 		FString AttachmentFilePath;
 
@@ -167,6 +167,11 @@ void USqliteDatabase::Initialize( const USqliteDatabaseInfo* DatabaseInfos )
 	// ---------------------------------------------------------------------------
 
 	bIsInitialized = true;
+}
+
+void USqliteDatabase::StatementFinalized( USqliteStatement* Statement )
+{
+	ActiveStatements.Remove( Statement );
 }
 
 ESqliteDatabaseOpenExecutionPins USqliteDatabase::DoOpenSqliteDatabase()
@@ -202,7 +207,7 @@ ESqliteDatabaseOpenExecutionPins USqliteDatabase::DoOpenSqliteDatabase()
 
 	sqlite3_stmt* stmt;
 
-	LastSqliteReturnCode = sqlite3_prepare_v2( this->DatabaseConnectionHandler, TCHAR_TO_ANSI( *SQL_AttachDatabase ), -1, &stmt, 0 );
+	LastSqliteReturnCode = sqlite3_prepare_v2( this->DatabaseConnectionHandler, TCHAR_TO_ANSI( *Sql_AttachDatabase ), -1, &stmt, 0 );
 	if( LastSqliteReturnCode != SQLITE_OK )
 	{
 		UE_LOG( LogSqlite, Error, TEXT("Failed to prepare 'AttachDatabase' statement: (%d) %s"),
@@ -263,8 +268,8 @@ ESqliteDatabaseOpenExecutionPins USqliteDatabase::DoOpenSqliteDatabase()
 	GetUserVersion( StoredUserVersion );
 
 	UE_LOG( LogSqlite, Log, TEXT("Database opened, current version=[%d,%d] stored version=[%d,%d]"),
-		DatabaseInfosAsset->ApplicationId,
-		DatabaseInfosAsset->UserVersion,
+		DatabaseInfoAsset->ApplicationId,
+		DatabaseInfoAsset->UserVersion,
 		StoredApplicationId,
 		StoredUserVersion );
 
@@ -322,8 +327,8 @@ ESqliteDatabaseOpenExecutionPins USqliteDatabase::DoOpenSqliteDatabase()
 			return ESqliteDatabaseOpenExecutionPins::OnFail;
 		}
 
-		UpdateApplicationId( DatabaseInfosAsset->SchemaName );
-		UpdateUserVersion( DatabaseInfosAsset->SchemaName );
+		UpdateApplicationId( DatabaseInfoAsset->SchemaName );
+		UpdateUserVersion( DatabaseInfoAsset->SchemaName );
 
 		for( const auto& Attachment : Attachments )
 		{
@@ -341,7 +346,7 @@ ESqliteDatabaseOpenExecutionPins USqliteDatabase::DoOpenSqliteDatabase()
 	// If file application_id does not match code application_id, it is not
 	// our file
 
-	else if( DatabaseInfosAsset->ApplicationId != StoredApplicationId )
+	else if( DatabaseInfoAsset->ApplicationId != StoredApplicationId )
 	{
 		UE_LOG( LogSqlite, Fatal, TEXT("Unexpected ApplicationId value %d"),
 			StoredApplicationId );
@@ -352,11 +357,11 @@ ESqliteDatabaseOpenExecutionPins USqliteDatabase::DoOpenSqliteDatabase()
 	// If file user_version does not match code user_version, we need to
 	// update the database
 
-	else if( DatabaseInfosAsset->UserVersion != StoredUserVersion )
+	else if( DatabaseInfoAsset->UserVersion != StoredUserVersion )
 	{
 		BeginTransaction( "update" );
 
-		if( !OnUpdatePrivate( DatabaseInfosAsset->UserVersion, StoredUserVersion ) )
+		if( !OnUpdatePrivate( DatabaseInfoAsset->UserVersion, StoredUserVersion ) )
 		{
 			UE_LOG( LogSqlite, Error, TEXT("OnUpdatePrivate failed: (%d) %s"),
 				GetErrorCode(),
@@ -367,7 +372,7 @@ ESqliteDatabaseOpenExecutionPins USqliteDatabase::DoOpenSqliteDatabase()
 		}
 
 		bParentOnUpdateCalled = false;
-		if( !OnUpdate( DatabaseInfosAsset->UserVersion, StoredUserVersion ) )
+		if( !OnUpdate( DatabaseInfoAsset->UserVersion, StoredUserVersion ) )
 		{
 			UE_LOG( LogSqlite, Error, TEXT("OnUpdate failed: (%d) %s"),
 				GetErrorCode(),
@@ -384,7 +389,7 @@ ESqliteDatabaseOpenExecutionPins USqliteDatabase::DoOpenSqliteDatabase()
 
 		bParentOnUpdateCalled = false;
 		ESqliteReturnCode ResultCode = ESqliteReturnCode::Unset;
-		OnUpdateEvent( DatabaseInfosAsset->UserVersion, StoredUserVersion, ResultCode );
+		OnUpdateEvent( DatabaseInfoAsset->UserVersion, StoredUserVersion, ResultCode );
 
 		if( !bParentOnUpdateCalled )
 		{
@@ -403,7 +408,7 @@ ESqliteDatabaseOpenExecutionPins USqliteDatabase::DoOpenSqliteDatabase()
 			return ESqliteDatabaseOpenExecutionPins::OnFail;
 		}
 	
-		UpdateUserVersion( DatabaseInfosAsset->SchemaName );
+		UpdateUserVersion( DatabaseInfoAsset->SchemaName );
 
 		for( const auto& Attachment : Attachments )
 		{
@@ -602,27 +607,26 @@ void USqliteDatabase::Open( ESqliteDatabaseOpenExecutionPins& Branch, ESqliteErr
 
 bool USqliteDatabase::OnCreatePrivate()
 {
-	UE_LOG( LogSqlite, Log, TEXT("%s()"),
-		*FString( __func__ ) );
+	UE_LOG( LogSqlite, Log, TEXT("%s()"), *FString( __func__ ) );
 
 	bool error = false;
 
-	if( DatabaseInfosAsset->bCreateStoredStatementsTable && !CreateTable( TN_StoredStatements, SQL_CreateStoredStatements ) )
+	if( DatabaseInfoAsset->bCreateStoredStatementsTable && !CreateTable( TN_StoredStatements, Sql_CreateStoredStatements ) )
 	{
 		error |= true;
 	}
 
-	if( DatabaseInfosAsset->bCreatePropertiesTable && !CreateTable( TN_Properties, SQL_CreateProperties ) )
+	if( DatabaseInfoAsset->bCreatePropertiesTable && !CreateTable( TN_Properties, Sql_CreateProperties ) )
 	{
 		error |= true;
 	}
 
-	if( DatabaseInfosAsset->bCreateActorsStoreTable && !CreateTable( TN_ActorsStore, SQL_CreateActorsStore ) )
+	if( DatabaseInfoAsset->bCreateActorsStoreTable && !CreateTable( TN_ActorsStore, Sql_CreateActorsStore ) )
 	{
 		error |= true;
 	}
 
-	if( DatabaseInfosAsset->bCreateLogTable && !CreateTable( TN_Log, SQL_CreateLog ) )
+	if( DatabaseInfoAsset->bCreateLogTable && !CreateTable( TN_Log, Sql_CreateLog ) )
 	{
 		error |= true;
 	}
@@ -637,8 +641,7 @@ bool USqliteDatabase::OnCreatePrivate()
 
 bool USqliteDatabase::OnCreate()
 {
-	UE_LOG( LogSqlite, Log, TEXT("%s() [USqliteDatabase]"),
-		*FString( __func__ ) );
+	UE_LOG( LogSqlite, Log, TEXT("%s() [USqliteDatabase]"), *FString( __func__ ) );
 
 	bParentOnCreateCalled = true;
 	return true;
@@ -646,8 +649,7 @@ bool USqliteDatabase::OnCreate()
 
 void USqliteDatabase::OnCreateEvent_Implementation( ESqliteReturnCode& Result )
 {
-	UE_LOG( LogSqlite, Log, TEXT("%s() [USqliteDatabase]"),
-		*FString( __func__ ) );
+	UE_LOG( LogSqlite, Log, TEXT("%s() [USqliteDatabase]"),*FString( __func__ ) );
 
 	bParentOnCreateCalled = true;
 	Result = ESqliteReturnCode::Success;
@@ -657,18 +659,15 @@ void USqliteDatabase::OnCreateEvent_Implementation( ESqliteReturnCode& Result )
 
 bool USqliteDatabase::OnUpdatePrivate( int NewDatabaseVersion, int OldDatabaseVersion )
 {
-	UE_LOG( LogSqlite, Log, TEXT("%s()"),
-		*FString( __func__ ) );
+	UE_LOG( LogSqlite, Log, TEXT("%s()"), *FString( __func__ ) );
 
 	return true;
 }
 
 bool USqliteDatabase::OnUpdate( int NewDatabaseVersion, int OldDatabaseVersion )
 {
-	UE_LOG( LogSqlite, Log, TEXT("%s( %d, %d ) [USqliteDatabase]"),
-		*FString( __func__ ),
-		NewDatabaseVersion,
-		OldDatabaseVersion );
+	UE_LOG( LogSqlite, Log, TEXT("%s( %d, %d ) [USqliteDatabase]"), *FString( __func__ ),
+		NewDatabaseVersion, OldDatabaseVersion );
 
 	bParentOnUpdateCalled = true;
 	return true;
@@ -676,8 +675,7 @@ bool USqliteDatabase::OnUpdate( int NewDatabaseVersion, int OldDatabaseVersion )
 
 void USqliteDatabase::OnUpdateEvent_Implementation( int NewDatabaseVersion, int OldDatabaseVersion, ESqliteReturnCode& Result )
 {
-	UE_LOG( LogSqlite, Log, TEXT("%s() [USqliteDatabase]"),
-		*FString( __func__ ) );
+	UE_LOG( LogSqlite, Log, TEXT("%s() [USqliteDatabase]"), *FString( __func__ ) );
 
 	bParentOnUpdateCalled = true;
 	Result = ESqliteReturnCode::Success;
@@ -689,11 +687,28 @@ void USqliteDatabase::OnUpdateEvent_Implementation( int NewDatabaseVersion, int 
 
 void USqliteDatabase::Close()
 {
-	UE_LOG( LogSqlite, Log, TEXT("Closing database '%s'"),
-		*DatabaseFilePath );
+	UE_LOG( LogSqlite, Log, TEXT("Closing database '%s'"), *DatabaseFilePath );
 
 	if( DatabaseConnectionHandler != nullptr )
 	{
+		if( ! ActiveStatements.IsEmpty() )
+		{
+			UE_LOG( LogSqlite, Warning, TEXT("Finalizing %d leftover statement(s) before closing."), ActiveStatements.Num() );
+
+			TArray<USqliteStatement*> ActiveStatementsCachedList( ActiveStatements );
+			for( const auto& Statement : ActiveStatementsCachedList )
+			{
+				Statement->Finalize();
+			}
+
+			if( ! ActiveStatements.IsEmpty() )
+			{
+				UE_LOG( LogSqlite, Error, TEXT("Still %d leftover statement(s) before closing, database will no be properly closed."), ActiveStatements.Num() );
+			}
+		}
+
+		// TODO: close BLOB handlers and finish backup objects
+		
 		if( sqlite3_close_v2( DatabaseConnectionHandler ) != SQLITE_OK )
 		{
 			UE_LOG( LogSqlite, Error, TEXT("Close() failed: (%d) %s"),
@@ -710,14 +725,14 @@ void USqliteDatabase::Close()
 // === application_id & user_version ==========================================
 // ============================================================================
 
-void USqliteDatabase::GetApplicationId( ESqliteDatabaseSimpleExecutionPins& Branch, int& _ApplicationId )
+void USqliteDatabase::GetApplicationId( ESqliteDatabaseSimpleExecutionPins& Branch, int& OutApplicationId )
 {
-	Branch = GetApplicationId( _ApplicationId )
+	Branch = GetApplicationId( OutApplicationId )
 		? ESqliteDatabaseSimpleExecutionPins::OnSuccess
 		: ESqliteDatabaseSimpleExecutionPins::OnFail;
 }
 
-bool USqliteDatabase::GetApplicationId( int& _ApplicationId )
+bool USqliteDatabase::GetApplicationId( int& OutApplicationId ) const
 {
 	bool bReturnValue;
 
@@ -737,7 +752,7 @@ bool USqliteDatabase::GetApplicationId( int& _ApplicationId )
 		}
 		else
 		{
-			_ApplicationId = sqlite3_column_int( stmt, 0 );
+			OutApplicationId = sqlite3_column_int( stmt, 0 );
 			bReturnValue = true;
 		}
 
@@ -749,7 +764,7 @@ bool USqliteDatabase::GetApplicationId( int& _ApplicationId )
 
 bool USqliteDatabase::UpdateApplicationId( FName Schema )
 {
-	FString sql = FString::Format( TEXT( "PRAGMA \"{0}\".application_id = {1}" ), { Schema.ToString(), DatabaseInfosAsset->ApplicationId } );
+	FString sql = FString::Format( TEXT( "PRAGMA \"{0}\".application_id = {1}" ), { Schema.ToString(), DatabaseInfoAsset->ApplicationId } );
 	char* errmsg;
 
 	int rc = sqlite3_exec( this->DatabaseConnectionHandler, TCHAR_TO_ANSI( *sql ), 0, 0, &errmsg );
@@ -761,7 +776,7 @@ bool USqliteDatabase::UpdateApplicationId( FName Schema )
 	}
 	else
 	{
-		StoredApplicationId = DatabaseInfosAsset->ApplicationId;
+		StoredApplicationId = DatabaseInfoAsset->ApplicationId;
 	}
 
 	if( errmsg != nullptr )
@@ -774,14 +789,14 @@ bool USqliteDatabase::UpdateApplicationId( FName Schema )
 
 // ----------------------------------------------------------------------------
 
-void USqliteDatabase::GetUserVersion( ESqliteDatabaseSimpleExecutionPins& Branch, int& _UserVersion )
+void USqliteDatabase::GetUserVersion( ESqliteDatabaseSimpleExecutionPins& Branch, int& OutUserVersion )
 {
-	Branch = GetUserVersion( _UserVersion )
+	Branch = GetUserVersion( OutUserVersion )
 		? ESqliteDatabaseSimpleExecutionPins::OnSuccess
 		: ESqliteDatabaseSimpleExecutionPins::OnFail;
 }
 
-bool USqliteDatabase::GetUserVersion( int& _UserVersion )
+bool USqliteDatabase::GetUserVersion( int& OutUserVersion ) const
 {
 	bool bReturnValue;
 
@@ -801,7 +816,7 @@ bool USqliteDatabase::GetUserVersion( int& _UserVersion )
 		}
 		else
 		{
-			_UserVersion = sqlite3_column_int( stmt, 0 );
+			OutUserVersion = sqlite3_column_int( stmt, 0 );
 			bReturnValue = true;
 		}
 
@@ -813,7 +828,7 @@ bool USqliteDatabase::GetUserVersion( int& _UserVersion )
 
 bool USqliteDatabase::UpdateUserVersion( FName Schema )
 {
-	FString sql = FString::Format( TEXT( "PRAGMA \"{0}\".user_version = {1}" ), { Schema.ToString(), DatabaseInfosAsset->UserVersion } );
+	FString sql = FString::Format( TEXT( "PRAGMA \"{0}\".user_version = {1}" ), { Schema.ToString(), DatabaseInfoAsset->UserVersion } );
 	char* errmsg;
 
 	int rc = sqlite3_exec( this->DatabaseConnectionHandler, TCHAR_TO_ANSI( *sql ), 0, 0, &errmsg );
@@ -825,7 +840,7 @@ bool USqliteDatabase::UpdateUserVersion( FName Schema )
 	}
 	else
 	{
-		StoredUserVersion = DatabaseInfosAsset->UserVersion;
+		StoredUserVersion = DatabaseInfoAsset->UserVersion;
 	}
 
 	if( errmsg != nullptr )
@@ -844,7 +859,7 @@ int USqliteDatabase::BeginTransaction( const FString& Hint )
 {
 	char* errmsg = nullptr;
 
-	int rc = sqlite3_exec( DatabaseConnectionHandler, TCHAR_TO_ANSI( *SQL_BeginTransaction ), nullptr, nullptr, &errmsg );
+	int rc = sqlite3_exec( DatabaseConnectionHandler, TCHAR_TO_ANSI( *Sql_BeginTransaction ), nullptr, nullptr, &errmsg );
 	if( rc != SQLITE_OK )
 	{
 		if( !Hint.IsEmpty() )
@@ -874,7 +889,7 @@ int USqliteDatabase::Commit( const FString& Hint )
 {
 	char* errmsg = nullptr;
 
-	int rc = sqlite3_exec( DatabaseConnectionHandler, TCHAR_TO_ANSI( *SQL_Commit ), nullptr, nullptr, &errmsg );
+	int rc = sqlite3_exec( DatabaseConnectionHandler, TCHAR_TO_ANSI( *Sql_Commit ), nullptr, nullptr, &errmsg );
 	if( rc != SQLITE_OK )
 	{
 		if( !Hint.IsEmpty() )
@@ -904,7 +919,7 @@ int USqliteDatabase::Rollback( const FString& Hint )
 {
 	char* errmsg = nullptr;
 
-	int rc = sqlite3_exec( DatabaseConnectionHandler, TCHAR_TO_ANSI( *SQL_Rollback ), nullptr, nullptr, &errmsg );
+	int rc = sqlite3_exec( DatabaseConnectionHandler, TCHAR_TO_ANSI( *Sql_Rollback ), nullptr, nullptr, &errmsg );
 	if( rc != SQLITE_OK )
 	{
 		if( !Hint.IsEmpty() )
@@ -936,14 +951,14 @@ int USqliteDatabase::Rollback( const FString& Hint )
 
 int USqliteDatabase::GetErrorCode()
 {
-	if( DatabaseInfosAsset->ThreadingMode == ESqliteDatabaseThreadingMode::FULL_MUTEX )
+	if( DatabaseInfoAsset->ThreadingMode == ESqliteDatabaseThreadingMode::FULL_MUTEX )
 	{
 		sqlite3_mutex_enter( sqlite3_db_mutex( DatabaseConnectionHandler ) );
 	}
 
 	int rc = sqlite3_errcode( DatabaseConnectionHandler );
 
-	if( DatabaseInfosAsset->ThreadingMode == ESqliteDatabaseThreadingMode::FULL_MUTEX )
+	if( DatabaseInfoAsset->ThreadingMode == ESqliteDatabaseThreadingMode::FULL_MUTEX )
 	{
 		sqlite3_mutex_leave( sqlite3_db_mutex( DatabaseConnectionHandler ) );
 	}
@@ -953,14 +968,14 @@ int USqliteDatabase::GetErrorCode()
 
 int USqliteDatabase::GetExtentedErrorCode()
 {
-	if( DatabaseInfosAsset->ThreadingMode == ESqliteDatabaseThreadingMode::FULL_MUTEX )
+	if( DatabaseInfoAsset->ThreadingMode == ESqliteDatabaseThreadingMode::FULL_MUTEX )
 	{
 		sqlite3_mutex_enter( sqlite3_db_mutex( DatabaseConnectionHandler ) );
 	}
 
 	int rc = sqlite3_extended_errcode( DatabaseConnectionHandler );
 
-	if( DatabaseInfosAsset->ThreadingMode == ESqliteDatabaseThreadingMode::FULL_MUTEX )
+	if( DatabaseInfoAsset->ThreadingMode == ESqliteDatabaseThreadingMode::FULL_MUTEX )
 	{
 		sqlite3_mutex_leave( sqlite3_db_mutex( DatabaseConnectionHandler ) );
 	}
@@ -970,14 +985,14 @@ int USqliteDatabase::GetExtentedErrorCode()
 
 FString USqliteDatabase::GetErrorMessage()
 {
-	if( DatabaseInfosAsset->ThreadingMode == ESqliteDatabaseThreadingMode::FULL_MUTEX )
+	if( DatabaseInfoAsset->ThreadingMode == ESqliteDatabaseThreadingMode::FULL_MUTEX )
 	{
 		sqlite3_mutex_enter( sqlite3_db_mutex( DatabaseConnectionHandler ) );
 	}
 
 	FString rs = FString( sqlite3_errmsg( DatabaseConnectionHandler ) );
 
-	if( DatabaseInfosAsset->ThreadingMode == ESqliteDatabaseThreadingMode::FULL_MUTEX )
+	if( DatabaseInfoAsset->ThreadingMode == ESqliteDatabaseThreadingMode::FULL_MUTEX )
 	{
 		sqlite3_mutex_leave( sqlite3_db_mutex( DatabaseConnectionHandler ) );
 	}
@@ -987,14 +1002,14 @@ FString USqliteDatabase::GetErrorMessage()
 
 int USqliteDatabase::GetErrorOffset()
 {
-	if( DatabaseInfosAsset->ThreadingMode == ESqliteDatabaseThreadingMode::FULL_MUTEX )
+	if( DatabaseInfoAsset->ThreadingMode == ESqliteDatabaseThreadingMode::FULL_MUTEX )
 	{
 		sqlite3_mutex_enter( sqlite3_db_mutex( DatabaseConnectionHandler ) );
 	}
 
 	int rc = sqlite3_error_offset( DatabaseConnectionHandler );
 
-	if( DatabaseInfosAsset->ThreadingMode == ESqliteDatabaseThreadingMode::FULL_MUTEX )
+	if( DatabaseInfoAsset->ThreadingMode == ESqliteDatabaseThreadingMode::FULL_MUTEX )
 	{
 		sqlite3_mutex_leave( sqlite3_db_mutex( DatabaseConnectionHandler ) );
 	}
@@ -1007,15 +1022,12 @@ FString USqliteDatabase::GetErrorString( int ErrorCode )
 	return FString( sqlite3_errstr( ErrorCode ) );
 }
 
-
-
-
 ESqliteErrorCode USqliteDatabase::GetLastErrorCode()
 {
 	return USqliteStatics::MapNativeErrorCode( LastSqliteReturnCode );
 }
 
-int USqliteDatabase::GetLastErrorCodeCxx()
+int USqliteDatabase::GetLastErrorCodeCxx() const
 {
 	return LastSqliteReturnCode;
 }
@@ -1039,12 +1051,14 @@ USqliteStatement* USqliteDatabase::Prepare( FString sql )
 	Statement->Database = this;
 	Statement->StatementHandler = stmt;
 
+	ActiveStatements.Add( Statement );
+	
 	return Statement;
 }
 
-FString USqliteDatabase::GetDatabaseFileName()
+FString USqliteDatabase::GetDatabaseFileName() const
 {
-	return DatabaseInfosAsset->DatabaseFileName;
+	return DatabaseInfoAsset->DatabaseFileName;
 }
 
 FString USqliteDatabase::GetDatabaseFilePath()
@@ -1056,7 +1070,7 @@ FString USqliteDatabase::GetDatabaseFilePath()
 // = UTILITIES ================================================================
 // ============================================================================
 
-bool USqliteDatabase::CreateTable( FName TableName, FString Sql )
+bool USqliteDatabase::CreateTable( FName TableName, FString Sql ) const
 {
 	char* errmsg = nullptr;
 
@@ -1086,26 +1100,26 @@ bool USqliteDatabase::CreateTable( FName TableName, FString Sql )
 // = CONSTANTS ================================================================
 // ============================================================================
 
-const FString USqliteDatabase::SQL_BeginTransaction = TEXT( "BEGIN TRANSACTION;" );
-const FString USqliteDatabase::SQL_Commit = TEXT( "COMMIT;" );
-const FString USqliteDatabase::SQL_Rollback = TEXT( "ROLLBACK;" );
+const FString USqliteDatabase::Sql_BeginTransaction = TEXT( "BEGIN TRANSACTION;" );
+const FString USqliteDatabase::Sql_Commit = TEXT( "COMMIT;" );
+const FString USqliteDatabase::Sql_Rollback = TEXT( "ROLLBACK;" );
 
 // ----------------------------------------------------------------------------
 
 const FName USqliteDatabase::PN_DatabaseName( "@DatabaseName" );
 const FName USqliteDatabase::PN_SchemaName( "@SchemaName" );
 
-const FString USqliteDatabase::SQL_AttachDatabase = TEXT( "ATTACH DATABASE @DatabaseName AS @SchemaName;" );
-const FString USqliteDatabase::SQL_DetachDatabase = TEXT( "DETACH DATABASE @SchemName;" );
+const FString USqliteDatabase::Sql_AttachDatabase = TEXT( "ATTACH DATABASE @DatabaseName AS @SchemaName;" );
+const FString USqliteDatabase::Sql_DetachDatabase = TEXT( "DETACH DATABASE @SchemName;" );
 
-const FString USqliteDatabase::SQL_ListSchemas = TEXT(
+const FString USqliteDatabase::Sql_ListSchemas = TEXT(
 	"SELECT name "
 	"FROM pragma_database_list "
 	"WHERE name NOT IN ('main', 'temp') "
 	"ORDER BY name;"
 );
 
-const FString USqliteDatabase::SQL_SchemaExists = TEXT(
+const FString USqliteDatabase::Sql_SchemaExists = TEXT(
 	"SELECT COUNT(*)"
 	"FROM pragma_database_list "
 	"WHERE name = @SchemaName"
@@ -1114,7 +1128,7 @@ const FString USqliteDatabase::SQL_SchemaExists = TEXT(
 // ----------------------------------------------------------------------------
 
 const FName USqliteDatabase::TN_StoredStatements( "StoredStatements" );
-const FString USqliteDatabase::SQL_CreateStoredStatements = TEXT(
+const FString USqliteDatabase::Sql_CreateStoredStatements = TEXT(
 	"CREATE TABLE IF NOT EXISTS StoredStatements "
 	"("
 	"\"Key\" TEXT PRIMARY KEY, "
@@ -1125,7 +1139,7 @@ const FString USqliteDatabase::SQL_CreateStoredStatements = TEXT(
 );
 
 const FName USqliteDatabase::TN_Properties( "Properties" );
-const FString USqliteDatabase::SQL_CreateProperties = TEXT(
+const FString USqliteDatabase::Sql_CreateProperties = TEXT(
 	"CREATE TABLE IF NOT EXISTS Properties "
 	"("
 	"\"Key\" TEXT PRIMARY KEY, "
@@ -1139,7 +1153,7 @@ const FString USqliteDatabase::SQL_CreateProperties = TEXT(
 
 
 const FName USqliteDatabase::TN_ActorsStore( "ActorsStore" );
-const FString USqliteDatabase::SQL_CreateActorsStore = TEXT(
+const FString USqliteDatabase::Sql_CreateActorsStore = TEXT(
 	"CREATE TABLE IF NOT EXISTS ActorsStore "
 	"("
 	"\"Id\" INTEGER PRIMARY KEY, "
@@ -1158,6 +1172,6 @@ const FString USqliteDatabase::SQL_CreateActorsStore = TEXT(
 );
 
 const FName USqliteDatabase::TN_Log( "Log" );
-const FString USqliteDatabase::SQL_CreateLog = TEXT(
+const FString USqliteDatabase::Sql_CreateLog = TEXT(
 	""
 );

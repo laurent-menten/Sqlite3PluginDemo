@@ -42,7 +42,13 @@ int USqliteStatement::Finalize()
 {
 	UE_LOG( LogSqlite, Log, TEXT( "Finalize" ) );
 
-	return sqlite3_finalize( StatementHandler );
+	int rc = sqlite3_finalize( StatementHandler );
+	if( rc == SQLITE_OK )
+	{
+		Database->StatementFinalized( this );
+	}
+	
+	return rc;
 }
 
 // Blueprint

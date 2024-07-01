@@ -20,4 +20,4 @@ void FSqlite3Module::ShutdownModule()
 
 #undef LOCTEXT_NAMESPACE
 	
-IMPLEMENT_MODULE(FSqlite3Module, Sqlite3)
+IMPLEMENT_MODULE( FSqlite3Module, Sqlite3 )
