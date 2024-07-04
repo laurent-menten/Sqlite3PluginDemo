@@ -4,8 +4,30 @@
 
 #include "CoreMinimal.h"
 
+#include "Sqlite3/Public/SqliteStatics.h"
+
 DECLARE_LOG_CATEGORY_EXTERN( LogSqlite, Log, All );
 DECLARE_LOG_CATEGORY_EXTERN( LogSqliteEditor, Log, All );
+
+FORCEINLINE void LOG_SQLITE_WARNING( const char Func [], const int ErrorCode, const char* Message )
+{
+	UE_LOG( LogSqlite, Warning, TEXT("%hs = %hs [%d] : %hs"), Func, USqliteStatics::GetSqlite3ErrorSymbol(ErrorCode), ErrorCode, Message );
+}
+
+FORCEINLINE void LOG_SQLITE_WARNING( const char Func [], const int ErrorCode, const char* Tag, const char* Message )
+{
+	UE_LOG( LogSqlite, Warning, TEXT("%hs = %hs [%d] : [%hs] %hs"), Func, USqliteStatics::GetSqlite3ErrorSymbol(ErrorCode), ErrorCode, Tag, Message );
+}
+
+FORCEINLINE void LOG_SQLITE_ERROR( const char Func [], const int ErrorCode, const char* Message )
+{
+	UE_LOG( LogSqlite, Error, TEXT("%hs = %hs [%d] : %hs"), Func, USqliteStatics::GetSqlite3ErrorSymbol(ErrorCode), ErrorCode, Message );
+}
+
+FORCEINLINE void LOG_SQLITE_ERROR( const char Func [], const int ErrorCode, const char* Tag, const char* Message )
+{
+	UE_LOG( LogSqlite, Error, TEXT("%hs = %hs [%d] : [%hs] %hs"), Func, USqliteStatics::GetSqlite3ErrorSymbol(ErrorCode), ErrorCode, Tag, Message );
+}
 
 /*
 #define LOG_FATAL(x, ...)		{UE_LOG( LogSqlite, Fatal, TEXT(x), __VA_ARGS__ )}

@@ -119,10 +119,15 @@ class SQLITE3_API USqliteDatabaseInfo : public UDataAsset
 {
 	GENERATED_BODY()
 
+	friend class USqliteDatabaseInfoValidator;
+	
 public:
 	USqliteDatabaseInfo( const FObjectInitializer& ObjectInitializer );
 
 	virtual ~USqliteDatabaseInfo() override;
+
+private:
+	bool bIsValidated;
 	
 public:
 	/**

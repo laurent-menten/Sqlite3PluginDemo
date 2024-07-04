@@ -24,6 +24,8 @@ enum class ESqliteDatabaseSimpleExecutionPins : uint8
 	OnFail
 };
 
+// ----------------------------------------------------------------------------
+
 /**
  * Return value for blueprint events
  */
@@ -41,10 +43,14 @@ UENUM( BlueprintType )
 enum class ESqliteDatabaseOpenExecutionPins : uint8
 {
     OnSuccess,		// Database successfully opened
-	OnCreate,		// Database was created (application_id is 0)
+	OnCreate,		// Database was created (application_id was 0)
 	OnUpdate,		// Database need update (user_version mismatch)
 	OnFail			// Failed to open database
 };
+
+// ============================================================================
+// === 
+// ============================================================================
 
 UENUM( BlueprintType )
 enum class ESqliteDatabaseOpenReturnCodes : uint8
@@ -57,7 +63,9 @@ enum class ESqliteDatabaseOpenReturnCodes : uint8
 	OpenFailed
 };
 
-// ----------------------------------------------------------------------------
+// ============================================================================
+// === 
+// ============================================================================
 
 UENUM( BlueprintType )
 enum class ESqliteType : uint8
@@ -71,7 +79,9 @@ enum class ESqliteType : uint8
 	None
 };
 
-// ----------------------------------------------------------------------------
+// ============================================================================
+// === 
+// ============================================================================
 
 UENUM( BlueprintType )
 enum class ESqliteStatementStatus : uint8
@@ -85,6 +95,7 @@ enum class ESqliteStatementStatus : uint8
 	FilterMiss		= SQLITE_STMTSTATUS_FILTER_MISS,
 	FilterHit		= SQLITE_STMTSTATUS_FILTER_HIT,
 	MemUsed			= SQLITE_STMTSTATUS_MEMUSED,
+
 	None			= 0 UMETA( Hidden ),
 };
 
@@ -105,6 +116,7 @@ enum class ESqliteDatabaseStatus : uint8
 	CacheSpill			= SQLITE_DBSTATUS_CACHE_SPILL,
 	SchemaUsed			= SQLITE_DBSTATUS_SCHEMA_USED,
 	StatementUsed		= SQLITE_DBSTATUS_STMT_USED,
+
 	None				= 0 UMETA(Hidden),
 };
 
@@ -115,164 +127,165 @@ enum class ESqliteDatabaseStatus : uint8
 UENUM( BlueprintType )
 enum class ESqliteErrorCode : uint8
 {
-	Ok,						/* No error */
-	Row,					/* sqlite3_step() has another row ready */
-	Done,					/* sqlite3_step() has finished executing */
+	Ok,							/* No error */
 
-	Error,					/* Generic error */
-	Internal,				/* Internal logic error in  */
-	Perm,					/* Access permission denied */
-	Abort,					/* Callback routine requested an abort */
-	Busy,					/* The database file is locked */
-	Locked,					/* A table in the database is locked */
-	NoMem,					/* A malloc() failed */
-	ReadOnly,				/* Attempt to write a read-only database */
-	Interrupt,				/* Operation terminated by 3_interrupt()*/
-	IOErr,					/* Some kind of disk I/O error occurred */
-	Corrupt,				/* The database disk image is malformed */
-	NotFound,				/* Unknown opcode in 3_file_control() */
-	Full,					/* Insertion failed because database is full */
-	CantOpen,				/* Unable to open the database file */
-	Protocol,				/* Database lock protocol error */
-	Empty,					/* Internal use only */
-	Schema,					/* The database schema changed */
-	TooBig,					/* String or BLOB exceeds size limit */
-	Constaint,				/* Abort due to constraint violation */
-	Mismatch,				/* Data type mismatch */
-	Misuse,					/* Library used incorrectly */
-	NoLFS,					/* Uses OS features not supported on host */
-	Auth,					/* Authorization denied */
-	Format,					/* Not used */
-	Range,					/* 2nd parameter to 3_bind out of range */
-	NotADB,					/* File opened that is not a database file */
-	Notice,					/* Notifications from sqlite3_log() */
-	Warning,				/* Warnings from 3_log() */
+	Row,						/* sqlite3_step() has another row ready */
+	Done,						/* sqlite3_step() has finished executing */
+
+	Error,						/* Generic error */
+	Internal,					/* Internal logic error in  */
+	Perm,						/* Access permission denied */
+	Abort,						/* Callback routine requested an abort */
+	Busy,						/* The database file is locked */
+	Locked,						/* A table in the database is locked */
+	NoMem,						/* A malloc() failed */
+	ReadOnly,					/* Attempt to write a read-only database */
+	Interrupt,					/* Operation terminated by 3_interrupt()*/
+	IOErr,						/* Some kind of disk I/O error occurred */
+	Corrupt,					/* The database disk image is malformed */
+	NotFound,					/* Unknown opcode in 3_file_control() */
+	Full,						/* Insertion failed because database is full */
+	CantOpen,					/* Unable to open the database file */
+	Protocol,					/* Database lock protocol error */
+	Empty,						/* Internal use only */
+	Schema,						/* The database schema changed */
+	TooBig,						/* String or BLOB exceeds size limit */
+	Constaint,					/* Abort due to constraint violation */
+	Mismatch,					/* Data type mismatch */
+	Misuse,						/* Library used incorrectly */
+	NoLFS,						/* Uses OS features not supported on host */
+	Auth,						/* Authorization denied */
+	Format,						/* Not used */
+	Range,						/* 2nd parameter to 3_bind out of range */
+	NotADB,						/* File opened that is not a database file */
+	Notice,						/* Notifications from sqlite3_log() */
+	Warning,					/* Warnings from 3_log() */
 };
 
 UENUM( BlueprintType )
 enum class ESqliteExtendedErrorCode : uint8
 {
-	Ok,						/* No error */
-	Row,					/* sqlite3_step() has another row ready */
-	Done,					/* sqlite3_step() has finished executing */
+	Ok,							/* No error */
 
-	Error,					/* Generic error */
-	Internal,				/* Internal logic error in  */
-	Perm,					/* Access permission denied */
-	Abort,					/* Callback routine requested an abort */
-	Busy,					/* The database file is locked */
-	Locked,					/* A table in the database is locked */
-	NoMem,					/* A malloc() failed */
-	ReadOnly,				/* Attempt to write a read-only database */
-	Interrupt,				/* Operation terminated by 3_interrupt()*/
-	IOErr,					/* Some kind of disk I/O error occurred */
-	Corrupt,				/* The database disk image is malformed */
-	NotFound,				/* Unknown opcode in 3_file_control() */
-	Full,					/* Insertion failed because database is full */
-	CantOpen,				/* Unable to open the database file */
-	Protocol,				/* Database lock protocol error */
-	Empty,					/* Internal use only */
-	Schema,					/* The database schema changed */
-	TooBig,					/* String or BLOB exceeds size limit */
-	Constaint,				/* Abort due to constraint violation */
-	Mismatch,				/* Data type mismatch */
-	Misuse,					/* Library used incorrectly */
-	NoLFS,					/* Uses OS features not supported on host */
-	Auth,					/* Authorization denied */
-	Format,					/* Not used */
-	Range,					/* 2nd parameter to 3_bind out of range */
-	NotADB,					/* File opened that is not a database file */
-	Notice,					/* Notifications from sqlite3_log() */
-	Warning,				/* Warnings from 3_log() */
+	Row,						/* sqlite3_step() has another row ready */
+	Done,						/* sqlite3_step() has finished executing */
+
+	Error,						/* Generic error */
+	Internal,					/* Internal logic error in  */
+	Perm,						/* Access permission denied */
+	Abort,						/* Callback routine requested an abort */
+	Busy,						/* The database file is locked */
+	Locked,						/* A table in the database is locked */
+	NoMem,						/* A malloc() failed */
+	ReadOnly,					/* Attempt to write a read-only database */
+	Interrupt,					/* Operation terminated by 3_interrupt()*/
+	IOErr,						/* Some kind of disk I/O error occurred */
+	Corrupt,					/* The database disk image is malformed */
+	NotFound,					/* Unknown opcode in 3_file_control() */
+	Full,						/* Insertion failed because database is full */
+	CantOpen,					/* Unable to open the database file */
+	Protocol,					/* Database lock protocol error */
+	Empty,						/* Internal use only */
+	Schema,						/* The database schema changed */
+	TooBig,						/* String or BLOB exceeds size limit */
+	Constaint,					/* Abort due to constraint violation */
+	Mismatch,					/* Data type mismatch */
+	Misuse,						/* Library used incorrectly */
+	NoLFS,						/* Uses OS features not supported on host */
+	Auth,						/* Authorization denied */
+	Format,						/* Not used */
+	Range,						/* 2nd parameter to 3_bind out of range */
+	NotADB,						/* File opened that is not a database file */
+	Notice,						/* Notifications from sqlite3_log() */
+	Warning,					/* Warnings from 3_log() */
 
 	// Extended error codes
 
-	OkLoadPermanently,		/* Extension will not unload at db close*/
+	OkLoadPermanently,			/* Extension will not unload at db close*/
 
-	ErrorMissingCollSeq,
-	ErrorRetry,
-	ErrorSnapshot,
+	ErrorMissingCollSeq,		/**/
+	ErrorRetry,					/**/
+	ErrorSnapshot,				/**/
 
-	AbortRollback,
+	AbortRollback,				/**/
 
-	BusyRecovery,
-	BusySnapshot,
-	BusyTimeOut,
+	BusyRecovery,				/**/
+	BusySnapshot,				/**/
+	BusyTimeOut,				/**/
 
-	LockedSharedCache,
-	LockedVTab,
+	LockedSharedCache,			/**/
+	LockedVTab,					/**/
 
-	ReadOnlyRecovery,
-	ReadOnlyCantLock,
-	ReadOnlyRollback,
-	ReadOnlyDBMoved,
-	ReadOnlyCantInit,
-	ReadOnlyDirectory,
+	ReadOnlyRecovery,			/**/
+	ReadOnlyCantLock,			/**/
+	ReadOnlyRollback,			/**/
+	ReadOnlyDBMoved,			/**/
+	ReadOnlyCantInit,			/**/
+	ReadOnlyDirectory,			/**/
 
-	IOErrRead,
-	IOErrShortRead,
-	IOErrWrite,
-	IOErrFSync,
-	IOErrDirFSync,
-	IOErrTruncate,
-	IOErrFStat,
-	IOErrUnlock,
-	IOErrRDLock,
-	IOErrDelete,
-	IOErrBlocked,
-	IOErrNoMem,
-	IOErrAccess,
-	IOErrCheckReservedLock,
-	IOErrLock,
-	IOErrClose,
-	IOErrDirClose,
-	IOErrShmOpen,
-	IOErrShmSize,
-	IOErrShmLock,
-	IOErrShmMap,
-	IOErrSeek,
-	IOErrDeleteNoEnt,
-	IOErrMMap,
-	IOErrGetTempPath,
-	IOErrConvPath,
-	IOErrVNode,
-	IOErrAuth,
-	IOErrBeginAtomic,
-	IOErrCommitAtomic,
-	IOErrRollbackAtomic,
-	IOErrData,
-	IOErrCorruptFS,
+	IOErrRead,					/**/
+	IOErrShortRead,				/**/
+	IOErrWrite,					/**/
+	IOErrFSync,					/**/
+	IOErrDirFSync,				/**/
+	IOErrTruncate,				/**/
+	IOErrFStat,					/**/
+	IOErrUnlock,				/**/
+	IOErrRDLock,				/**/
+	IOErrDelete,				/**/
+	IOErrBlocked,				/**/
+	IOErrNoMem,					/**/
+	IOErrAccess,				/**/
+	IOErrCheckReservedLock,		/**/
+	IOErrLock,					/**/
+	IOErrClose,					/**/
+	IOErrDirClose,				/**/
+	IOErrShmOpen,				/**/
+	IOErrShmSize,				/**/
+	IOErrShmLock,				/**/
+	IOErrShmMap,				/**/
+	IOErrSeek,					/**/
+	IOErrDeleteNoEnt,			/**/
+	IOErrMMap,					/**/
+	IOErrGetTempPath,			/**/
+	IOErrConvPath,				/**/
+	IOErrVNode,					/**/
+	IOErrAuth,					/**/
+	IOErrBeginAtomic,			/**/
+	IOErrCommitAtomic,			/**/
+	IOErrRollbackAtomic,		/**/
+	IOErrData,					/**/
+	IOErrCorruptFS,				/**/
 
-	CorruptVTab,
-	CorruptSequence,
-	CorruptIndex,
-
-
-	CantOpenNoTempDir,
-	CantOpenIsDir,
-	CantOpenFullPath,
-	CantOpen_ConvPath,
+	CorruptVTab,				/**/
+	CorruptSequence,			/**/
+	CorruptIndex,				/**/
+	
+	CantOpenNoTempDir,			/**/
+	CantOpenIsDir,				/**/
+	CantOpenFullPath,			/**/
+	CantOpen_ConvPath,			/**/
 	CantOpenDirtyWal,			/* Not Used */
-	CantOpenSymLink,
+	CantOpenSymLink,			/**/
 
-	ConstraintCheck,
-	ConstraintCommitHook,
-	ConstraintForeignKey,
-	ConstraintFunction,
-	ConstraintNotNull,
-	ConstraintPrimaryKey,
-	ConstraintTrigger,
-	ConstraintUnique,
-	ConstraintVTab,
-	ConstraintRowId,
-	ConstraintPinned,
-	ConstraintDataType,
+	ConstraintCheck,			/**/
+	ConstraintCommitHook,		/**/
+	ConstraintForeignKey,		/**/
+	ConstraintFunction,			/**/
+	ConstraintNotNull,			/**/
+	ConstraintPrimaryKey,		/**/
+	ConstraintTrigger,			/**/
+	ConstraintUnique,			/**/
+	ConstraintVTab,				/**/
+	ConstraintRowId,			/**/
+	ConstraintPinned,			/**/
+	ConstraintDataType,			/**/
 
-	AuthUser,
+	AuthUser,					/**/
 
-	NoticeRecoverWal,
-	NoticeRecoverRollback,
-	NoticeRBU,
+	NoticeRecoverWal,			/**/
+	NoticeRecoverRollback,		/**/
+	NoticeRBU,					/**/
 
-	WarningAutoIndex
+	WarningAutoIndex			/**/
 };

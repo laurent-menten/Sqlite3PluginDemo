@@ -7,12 +7,6 @@
 
 #include <shlobj.h>
 
-// KNOWN BUG:
-// - Failure to open database after a first run. Need to restart editor.
-//		Exact reason unknown.
-//		My code DO call close() successfuly on first run
-//		Possible problem with unreal-fs code.
-
 // NOT IMPLEMENTED:
 //	- ResultSet
 
@@ -20,7 +14,7 @@
 // === 
 // ============================================================================
 
-// Note: DatabaseInfo asset has already been validated in editor.
+// Note: DatabaseInfo asset has been validated in editor.
 
 void USqliteDatabase::Initialize( const USqliteDatabaseInfo* DatabaseInfo )
 {
@@ -182,7 +176,7 @@ ESqliteDatabaseOpenExecutionPins USqliteDatabase::DoOpenSqliteDatabase()
 
 	if( !IsInitialized() )
 	{
-		UE_LOG( LogSqlite, Error, TEXT("Database not initialized.") );
+		LOG_SQLITE_ERROR( __func__, -1, "Database not initialized." );
 
 		return ESqliteDatabaseOpenExecutionPins::OnFail;
 	}
@@ -194,9 +188,7 @@ ESqliteDatabaseOpenExecutionPins USqliteDatabase::DoOpenSqliteDatabase()
 	LastSqliteReturnCode = sqlite3_open_v2( TCHAR_TO_ANSI(*DatabaseFilePath), &DatabaseConnectionHandler, OpenFlags, "unreal-fs" );
 	if( LastSqliteReturnCode != SQLITE_OK )
 	{
-		UE_LOG( LogSqlite, Error, TEXT("Open failed: (%d) %s"),
-			GetErrorCode(),
-			*GetErrorMessage() );
+		LOG_SQLITE_ERROR( __func__, GetErrorCode(), "Open failed." );
 
 		return ESqliteDatabaseOpenExecutionPins::OnFail;
 	}
@@ -210,9 +202,7 @@ ESqliteDatabaseOpenExecutionPins USqliteDatabase::DoOpenSqliteDatabase()
 	LastSqliteReturnCode = sqlite3_prepare_v2( this->DatabaseConnectionHandler, TCHAR_TO_ANSI( *Sql_AttachDatabase ), -1, &stmt, 0 );
 	if( LastSqliteReturnCode != SQLITE_OK )
 	{
-		UE_LOG( LogSqlite, Error, TEXT("Failed to prepare 'AttachDatabase' statement: (%d) %s"),
-			GetErrorCode(),
-			*GetErrorMessage() );
+		LOG_SQLITE_ERROR( __func__, GetErrorCode(), "Failed to prepare 'AttachDatabase' statement." );
 
 		return ESqliteDatabaseOpenExecutionPins::OnFail;
 	}
@@ -247,9 +237,7 @@ ESqliteDatabaseOpenExecutionPins USqliteDatabase::DoOpenSqliteDatabase()
 
 	if( (LastSqliteReturnCode != SQLITE_OK) && (LastSqliteReturnCode != SQLITE_DONE) )
 	{
-		UE_LOG( LogSqlite, Error, TEXT("Failed to bind or execute 'attach' statement: (%d) %s"),
-			GetErrorCode(),
-			*GetErrorMessage() );
+		LOG_SQLITE_ERROR( __func__, GetErrorCode(), "Failed to bind or execute 'attach' statement." );
 	}
 
 	sqlite3_finalize( stmt );
@@ -734,29 +722,31 @@ void USqliteDatabase::GetApplicationId( ESqliteDatabaseSimpleExecutionPins& Bran
 
 bool USqliteDatabase::GetApplicationId( int& OutApplicationId ) const
 {
+	const FString SqlRequest( "PRAGMA application_id");
 	bool bReturnValue;
 
-	sqlite3_stmt* stmt;
-
-	int rc = sqlite3_prepare_v2( this->DatabaseConnectionHandler, "PRAGMA application_id", -1, &stmt, 0 );
-	if( rc != SQLITE_OK )
+	sqlite3_stmt* Stmt;
+	
+	int ErrorCode = sqlite3_prepare_v2( this->DatabaseConnectionHandler, TCHAR_TO_ANSI( *SqlRequest ), -1, &Stmt, nullptr );
+	if( ErrorCode != SQLITE_OK )
 	{
+		LOG_SQLITE_ERROR( __func__, ErrorCode, TCHAR_TO_ANSI( *SqlRequest ) );
 		bReturnValue = false;
 	}
 	else
 	{
-		rc = sqlite3_step( stmt );
-		if( rc != SQLITE_ROW )
+		ErrorCode = sqlite3_step( Stmt );
+		if( ErrorCode != SQLITE_ROW )
 		{
 			bReturnValue = false;
 		}
 		else
 		{
-			OutApplicationId = sqlite3_column_int( stmt, 0 );
+			OutApplicationId = sqlite3_column_int( Stmt, 0 );
 			bReturnValue = true;
 		}
 
-		sqlite3_finalize( stmt );
+		sqlite3_finalize( Stmt );
 	}
 
 	return bReturnValue;
@@ -764,27 +754,25 @@ bool USqliteDatabase::GetApplicationId( int& OutApplicationId ) const
 
 bool USqliteDatabase::UpdateApplicationId( FName Schema )
 {
-	FString sql = FString::Format( TEXT( "PRAGMA \"{0}\".application_id = {1}" ), { Schema.ToString(), DatabaseInfoAsset->ApplicationId } );
-	char* errmsg;
+	const FString SqlRequest = FString::Format( TEXT( "PRAGMA \"{0}\".application_id = {1}" ), { Schema.ToString(), DatabaseInfoAsset->ApplicationId } );
+	char* ErrorMessage;
 
-	int rc = sqlite3_exec( this->DatabaseConnectionHandler, TCHAR_TO_ANSI( *sql ), 0, 0, &errmsg );
-	if( rc != SQLITE_OK )
+	int ErrorCode = sqlite3_exec( this->DatabaseConnectionHandler, TCHAR_TO_ANSI( *SqlRequest ), nullptr, nullptr, &ErrorMessage );
+	if( ErrorCode != SQLITE_OK )
 	{
-		UE_LOG( LogSqlite, Error, TEXT("Could not set appplication_id: (%d) %s"),
-			rc,
-			*FString( errmsg ) );
+		LOG_SQLITE_ERROR( __func__, ErrorCode, ErrorMessage );
 	}
 	else
 	{
 		StoredApplicationId = DatabaseInfoAsset->ApplicationId;
 	}
 
-	if( errmsg != nullptr )
+	if( ErrorMessage != nullptr )
 	{
-		sqlite3_free( errmsg );
+		sqlite3_free( ErrorMessage );
 	}
 
-	return rc == SQLITE_OK;
+	return ErrorCode == SQLITE_OK;
 }
 
 // ----------------------------------------------------------------------------
@@ -798,29 +786,31 @@ void USqliteDatabase::GetUserVersion( ESqliteDatabaseSimpleExecutionPins& Branch
 
 bool USqliteDatabase::GetUserVersion( int& OutUserVersion ) const
 {
+	const FString SqlRequest( "PRAGMA user_version");
 	bool bReturnValue;
 
-	sqlite3_stmt* stmt;
+	sqlite3_stmt* Stmt;
 
-	int rc = sqlite3_prepare_v2( this->DatabaseConnectionHandler, "PRAGMA user_version", -1, &stmt, 0 );
-	if( rc != SQLITE_OK )
+	int ErrorCode = sqlite3_prepare_v2( this->DatabaseConnectionHandler, TCHAR_TO_ANSI( *SqlRequest ), -1, &Stmt, nullptr );
+	if( ErrorCode != SQLITE_OK )
 	{
+		LOG_SQLITE_ERROR( __func__, ErrorCode, TCHAR_TO_ANSI( *SqlRequest ) );
 		bReturnValue = false;
 	}
 	else
 	{
-		rc = sqlite3_step( stmt );
-		if( rc != SQLITE_ROW )
+		ErrorCode = sqlite3_step( Stmt );
+		if( ErrorCode != SQLITE_ROW )
 		{
 			bReturnValue = false;
 		}
 		else
 		{
-			OutUserVersion = sqlite3_column_int( stmt, 0 );
+			OutUserVersion = sqlite3_column_int( Stmt, 0 );
 			bReturnValue = true;
 		}
 
-		sqlite3_finalize( stmt );
+		sqlite3_finalize( Stmt );
 	}
 
 	return bReturnValue;
@@ -828,27 +818,25 @@ bool USqliteDatabase::GetUserVersion( int& OutUserVersion ) const
 
 bool USqliteDatabase::UpdateUserVersion( FName Schema )
 {
-	FString sql = FString::Format( TEXT( "PRAGMA \"{0}\".user_version = {1}" ), { Schema.ToString(), DatabaseInfoAsset->UserVersion } );
-	char* errmsg;
+	const FString SqlRequest = FString::Format( TEXT( "PRAGMA \"{0}\".user_version = {1}" ), { Schema.ToString(), DatabaseInfoAsset->UserVersion } );
+	char* ErrorMessage;
 
-	int rc = sqlite3_exec( this->DatabaseConnectionHandler, TCHAR_TO_ANSI( *sql ), 0, 0, &errmsg );
-	if( rc != SQLITE_OK )
+	int ErrorCode = sqlite3_exec( this->DatabaseConnectionHandler, TCHAR_TO_ANSI( *SqlRequest ), nullptr, nullptr, &ErrorMessage );
+	if( ErrorCode != SQLITE_OK )
 	{
-		UE_LOG( LogSqlite, Error, TEXT("Could not set user_version: (%d) %s"),
-			rc,
-			*FString( errmsg ) );
+		LOG_SQLITE_ERROR( __func__, ErrorCode, ErrorMessage );
 	}
 	else
 	{
 		StoredUserVersion = DatabaseInfoAsset->UserVersion;
 	}
 
-	if( errmsg != nullptr )
+	if( ErrorMessage != nullptr )
 	{
-		sqlite3_free( errmsg );
+		sqlite3_free( ErrorMessage );
 	}
 
-	return rc == SQLITE_OK;
+	return ErrorCode == SQLITE_OK;
 }
 
 // ============================================================================
@@ -864,16 +852,11 @@ int USqliteDatabase::BeginTransaction( const FString& Hint )
 	{
 		if( !Hint.IsEmpty() )
 		{
-			UE_LOG( LogSqlite, Error, TEXT("[Hint: %s] Failed to BEGIN transaction: (%d) %s."),
-				*Hint,
-				rc,
-				*FString( errmsg ) );
+			LOG_SQLITE_ERROR( __func__, rc, TCHAR_TO_ANSI(*Hint), errmsg );
 		}
 		else
 		{
-			UE_LOG( LogSqlite, Error, TEXT("Failed to BEGIN transaction: (%d) %s."),
-				rc,
-				*FString( errmsg ) );
+			LOG_SQLITE_ERROR( __func__, rc, errmsg );
 		}
 	}
 
@@ -894,16 +877,11 @@ int USqliteDatabase::Commit( const FString& Hint )
 	{
 		if( !Hint.IsEmpty() )
 		{
-			UE_LOG( LogSqlite, Error, TEXT("[Hint: %s] Failed to COMMIT transaction: (%d) %s."),
-				*Hint,
-				rc,
-				*FString( errmsg ) );
+			LOG_SQLITE_ERROR( __func__, rc, TCHAR_TO_ANSI(*Hint), errmsg );
 		}
 		else
 		{
-			UE_LOG( LogSqlite, Error, TEXT("Failed to COMMIT transaction: (%d) %s."),
-				rc,
-				*FString( errmsg ) );
+			LOG_SQLITE_ERROR( __func__, rc, errmsg );
 		}
 	}
 
@@ -924,16 +902,11 @@ int USqliteDatabase::Rollback( const FString& Hint )
 	{
 		if( !Hint.IsEmpty() )
 		{
-			UE_LOG( LogSqlite, Error, TEXT("[Hint: %s] Failed to ROLLBACK transaction: (%d) %s."),
-				*Hint,
-				rc,
-				*FString( errmsg ) );
+			LOG_SQLITE_ERROR( __func__, rc, TCHAR_TO_ANSI(*Hint), errmsg );
 		}
 		else
 		{
-			UE_LOG( LogSqlite, Error, TEXT("Failed to ROLLBACK transaction: (%d) %s."),
-				rc,
-				*FString( errmsg ) );
+			LOG_SQLITE_ERROR( __func__, rc, errmsg );
 		}
 	}
 
@@ -1034,8 +1007,6 @@ int USqliteDatabase::GetLastErrorCodeCxx() const
 
 USqliteStatement* USqliteDatabase::Prepare( FString sql )
 {
-	UE_LOG( LogSqlite, Log, TEXT("Preparing statement '%s'"), *sql );
-
 	sqlite3_stmt* stmt;
 	LastSqliteReturnCode = sqlite3_prepare_v2( DatabaseConnectionHandler, TCHAR_TO_ANSI( *sql ), -1, &stmt, NULL );
 	if( LastSqliteReturnCode != SQLITE_OK )
@@ -1072,28 +1043,20 @@ FString USqliteDatabase::GetDatabaseFilePath()
 
 bool USqliteDatabase::CreateTable( FName TableName, FString Sql ) const
 {
-	char* errmsg = nullptr;
+	char* ErrorMessage = nullptr;
 
-	int rc = sqlite3_exec( DatabaseConnectionHandler, TCHAR_TO_ANSI( *Sql ), 0, 0, &errmsg );
-	if( rc != SQLITE_OK )
+	const int ErrorCode = sqlite3_exec( DatabaseConnectionHandler, TCHAR_TO_ANSI( *Sql ), nullptr, nullptr, &ErrorMessage );
+	if( ErrorCode != SQLITE_OK )
 	{
-		UE_LOG( LogSqlite, Error, TEXT("Could not create table '%s': (%d) %s"),
-			*TableName.ToString(),
-			rc,
-			*FString( errmsg ) );
-	}
-	else
-	{
-		UE_LOG( LogSqlite, Log, TEXT("Created table '%s' succesfully"),
-			*TableName.ToString() );
+		LOG_SQLITE_ERROR( __func__, ErrorCode, TCHAR_TO_ANSI(*TableName.ToString()), ErrorMessage );
 	}
 
-	if( errmsg != nullptr )
+	if( ErrorMessage != nullptr )
 	{
-		sqlite3_free( errmsg );
+		sqlite3_free( ErrorMessage );
 	}
 
-	return rc == SQLITE_OK;
+	return ErrorCode == SQLITE_OK;
 }
 
 // ============================================================================

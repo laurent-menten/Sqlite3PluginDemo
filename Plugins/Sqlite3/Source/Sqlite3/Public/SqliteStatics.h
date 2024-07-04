@@ -81,6 +81,8 @@ public:
 	// - Error codes -------------------------------------------------------------
 	// ---------------------------------------------------------------------------
 
+	static const char* GetSqlite3ErrorSymbol( int ErrorCode );
+	
 	/**
 	 * Get the corresponding ESqlite[Extended]ErrorCode enum value for a native error code.
 	 * 

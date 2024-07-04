@@ -134,12 +134,18 @@ EDataValidationResult USqliteDatabaseInfoValidator::ValidateLoadedAsset_Implemen
 
 	if( Context.GetNumErrors() == 0 )
 	{
+		DatabaseInfos->bIsValidated = true;
+		
 		AssetPasses( InAsset );
+
 		return EDataValidationResult::Valid;
 	}
 	else
 	{
+		DatabaseInfos->bIsValidated = false;
+
 		AssetFails( InAsset, FText::FromString( "failed..." ) );
+
 		return EDataValidationResult::Invalid;
 	}
 }
