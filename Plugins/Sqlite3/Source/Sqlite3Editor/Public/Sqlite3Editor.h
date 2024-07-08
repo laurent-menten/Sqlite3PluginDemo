@@ -3,10 +3,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "SqliteDatabaseInfoTypeActions.h"
 #include "Modules/ModuleManager.h"
 
 class FSqlite3EditorModule : public IModuleInterface
 {
+private:
+	TSharedPtr<FSqliteDatabaseInfoTypeActions> SqliteDatabaseInfoTypeActions;
+	
 public:
 	static const FName AssetCategoryName;
 	static const FText AssetCatgegoryDisplayName;

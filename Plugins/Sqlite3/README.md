@@ -3,19 +3,20 @@
 This plugins is designed to expose the Sqlite3 API to blueprint and c++. It aims to provide an
 experience as seamless as possible to programmers with working knowledge of Sqlite.
 
-There are two separate modules:
-- Sqlite3: contains runtime code for accessing database.
-- Sqlite3Editor: contains development code like custom blueprint node or data asset validation.
+There are three separate modules:
+- Sqlite3: contains runtime code for accessing databases.
+- Sqlite3Tools: contains the custom blueprint nodes.
+- Sqlite3Editor: contains the editor and data asset validation code.
 
 The Sqlite3 module provide a game instance subsystem that manage the open databases.
 It also provides the SqliteDatabase and SqliteStatement classes.
 Database settings are stored in a custom DataAsset.
 
 ## Sqlite3 version
-This plugin contains the Sqlite amalgamation embedded into the Sqlite3 module.
+This plugin contains Sqlite code embedded into the Sqlite3 module.
 
 - Current Sqlite version is 3.46.0 (2024-05-23 13:25:27).
-- Current sqllog version is 2012 November 26.
+- Current sqllog extention version is 2012 November 26.
 
 ### How to update Sqlite3 amalgamation
 To change the version of Sqlite embedded in the plugin, you need to:
@@ -23,7 +24,7 @@ To change the version of Sqlite embedded in the plugin, you need to:
 2. Copy *sqlite3.h* into the *Sqlite3\Public\sqlite* folder and rename it to *sqlite3.h-inline*.
 3. Copy *sqlite3.c* into the *Sqlite3\Private\sqlite* folder and rename it to *sqlite3.c-inline*.
 
-### How to update the sqllog extention
+### How to enable/update the sqllog extention
 4. Add or uncomment the following line in file *Sqlite3.Build.cs*
 ```c#
 PrivateDefinitions.Add( "SQLITE_ENABLE_SQLLOG" );

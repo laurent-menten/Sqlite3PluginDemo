@@ -10,56 +10,6 @@
 // === 
 // ============================================================================
 
-void USqliteStatics::CreateSqliteDatabaseObject_Asset(
-	const USqliteDatabaseInfo* DatabaseInfos,
-	ESqliteDatabaseSimpleExecutionPins& Branch,
-	ESqliteErrorCode& ReturnCode,
-	USqliteDatabase* & DatabaseHandle
-)
-{
-	USqlite3Subsystem* Sqlite3Subsystem = USqlite3Subsystem::GetInstance();
-	if( Sqlite3Subsystem == nullptr )
-	{
-		UE_LOG( LogSqlite, Error, TEXT( "Sqlite3 Subsystem not found !" ) );
-
-		Branch = ESqliteDatabaseSimpleExecutionPins::OnFail;
-		ReturnCode = ESqliteErrorCode::Misuse;
-		DatabaseHandle = nullptr;
-		return;
-	}
-
-	// ---------------------------------------------------------------------------
-	// - Sanity checks -----------------------------------------------------------
-	// ---------------------------------------------------------------------------
-
-	if( !Sqlite3Subsystem->IsSqliteInitialized() )
-	{
-		UE_LOG( LogSqlite, Error, TEXT( "Sqlite library not initialized!" ) );
-
-		Branch = ESqliteDatabaseSimpleExecutionPins::OnFail;
-		ReturnCode = ESqliteErrorCode::Misuse;
-		DatabaseHandle = nullptr;
-		return;
-	}
-
-	// ---------------------------------------------------------------------------
-	// - Create USqliteDatabase object -------------------------------------------
-	// ---------------------------------------------------------------------------
-
-	USqliteDatabase* db = NewObject<USqliteDatabase>( GetTransientPackage(), DatabaseInfos->DatabaseClass );
-	db->Initialize( DatabaseInfos );
-
-	Sqlite3Subsystem->RegisterDatabase( db );
-
-	Branch = ESqliteDatabaseSimpleExecutionPins::OnSuccess;
-	ReturnCode = ESqliteErrorCode::Ok;
-	DatabaseHandle = db;
-}
-
-// ============================================================================
-// === 
-// ============================================================================
-
 FString USqliteStatics::LibVersion()
 {
 	return FString( sqlite3_libversion() );
@@ -272,10 +222,11 @@ ESqliteErrorCode USqliteStatics::MapNativeErrorCode( int ErrorCode )
 		case SQLITE_WARNING:					return ESqliteErrorCode::Warning;
 		case SQLITE_ROW:						return ESqliteErrorCode::Row;
 		case SQLITE_DONE:						return ESqliteErrorCode::Done;
-	}
 
-	UE_LOG( LogSqlite, Error, TEXT( "Unexpected Sqlite native error code: %d" ), ErrorCode );
-	return ESqliteErrorCode::Error;
+		default:
+			UE_LOG( LogSqlite, Error, TEXT( "Unexpected Sqlite native error code: %d" ), ErrorCode );
+			return ESqliteErrorCode::Error;
+	}
 }
 
 int USqliteStatics::UnmapNativeErrorCode( ESqliteErrorCode ErrorCode )
@@ -313,10 +264,11 @@ int USqliteStatics::UnmapNativeErrorCode( ESqliteErrorCode ErrorCode )
 		case ESqliteErrorCode::Warning:					return SQLITE_WARNING;
 		case ESqliteErrorCode::Row:						return SQLITE_ROW;
 		case ESqliteErrorCode::Done:					return SQLITE_DONE;
-	}
 
-	UE_LOG( LogSqlite, Error, TEXT( "Unexpected ESqliteErrorCode value: '%s'" ), *UEnum::GetValueAsString( ErrorCode ) );
-	return SQLITE_ERROR;
+		default:
+			UE_LOG( LogSqlite, Error, TEXT( "Unexpected ESqliteErrorCode value: '%s'" ), *UEnum::GetValueAsString( ErrorCode ) );
+			return SQLITE_ERROR;
+	}
 }
 
 bool USqliteStatics::CheckSqliteErrorCode( int NativeErrorCode, ESqliteErrorCode ErrorCode )
@@ -472,10 +424,12 @@ ESqliteExtendedErrorCode USqliteStatics::MapNativeExtendedErrorCode( int ErrorCo
 		case SQLITE_ROW:						return ESqliteExtendedErrorCode::Row;
 
 		case SQLITE_DONE:						return ESqliteExtendedErrorCode::Done;
+
+		default:
+			UE_LOG( LogSqlite, Error, TEXT( "Unexpected Sqlite native error code: %d" ), ErrorCode );
+			return ESqliteExtendedErrorCode::Error;
 	}
 
-	UE_LOG( LogSqlite, Error, TEXT( "Unexpected Sqlite native error code: %d" ), ErrorCode );
-	return ESqliteExtendedErrorCode::Error;
 }
 
 int USqliteStatics::UnmapNativeExtendedErrorCode( ESqliteExtendedErrorCode ErrorCode )
@@ -617,10 +571,11 @@ int USqliteStatics::UnmapNativeExtendedErrorCode( ESqliteExtendedErrorCode Error
 		case ESqliteExtendedErrorCode::Row:						return SQLITE_ROW;
 
 		case ESqliteExtendedErrorCode::Done:					return SQLITE_DONE;
-	}
 
-	UE_LOG( LogSqlite, Error, TEXT( "Unexpected ESqliteExtendedErrorCode value: '%s'" ), *UEnum::GetValueAsString( ErrorCode ) );
-	return SQLITE_ERROR;
+		default:
+			UE_LOG( LogSqlite, Error, TEXT( "Unexpected ESqliteExtendedErrorCode value: '%s'" ), *UEnum::GetValueAsString( ErrorCode ) );
+			return SQLITE_ERROR;
+	}
 }
 
 bool USqliteStatics::CheckSqliteExtendedErrorCode( int NativeErrorCode, ESqliteExtendedErrorCode ErrorCode )

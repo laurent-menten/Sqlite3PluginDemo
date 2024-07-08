@@ -2,7 +2,7 @@
 
 #if SQLITE_OS_OTHER
 
-#include "platform/mutex.h"
+#include "../../Sqlite3/Private/platform/mutex.h"
 #include "Sqlite3Log.h"
 
 #include "CoreTypes.h"

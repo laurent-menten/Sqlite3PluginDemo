@@ -2,8 +2,14 @@
 
 
 #include "SqliteDatabaseInfoValidator.h"
+
+#include "Sqlite3EditorLog.h"
 #include "SqliteDatabase.h"
 #include "SqliteDatabaseInfo.h"
+
+#define SQLITE_OS_OTHER 1
+#include "../../Sqlite3/Private/platform/malloc.cpp"
+//#include "../../Sqlite3/Private/sqlite/SQLite3EmbeddedPlatform.h"
 
 #include "Misc/DataValidation.h"
 
@@ -22,6 +28,13 @@ bool USqliteDatabaseInfoValidator::CanValidateAsset_Implementation( const FAsset
 
 	return Super::CanValidateAsset_Implementation( InAssetData, InObject, InContext );
 }
+
+/*
+ * TO add: validation of table.
+ *
+ * create a temporary database in memory database.
+ * generate sql request and execute it, if it fails report failure.
+ */
 
 EDataValidationResult USqliteDatabaseInfoValidator::ValidateLoadedAsset_Implementation( const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& Context )
 {
@@ -98,7 +111,7 @@ EDataValidationResult USqliteDatabaseInfoValidator::ValidateLoadedAsset_Implemen
 	{
 		if( Attachment.FileName.IsEmpty() )
 		{
-			Context.AddError( FText::FromString( TEXT( "Filename cannot be empty, user ':memory:' or a valid name." ) ) );
+			Context.AddError( FText::FromString( TEXT( "Attachment filename cannot be empty, use ':memory:' or a valid name." ) ) );
 		}
 		else if( Attachment.FileName.Compare( ":memory:", ESearchCase::IgnoreCase ) != 0 )
 		{
@@ -132,6 +145,58 @@ EDataValidationResult USqliteDatabaseInfoValidator::ValidateLoadedAsset_Implemen
 	// 
 	// ---------------------------------------------------------------------------
 
+	DatabaseInfos->GeneratedTableSqlCommands.Empty();
+
+	for( auto& CustomTable : DatabaseInfos->CustomTables )
+	{
+		FString sql = GenerateCreateTableSqlCommand( CustomTable );
+
+		DatabaseInfos->GeneratedTableSqlCommands.Add( CustomTable.TableName, sql );
+	}
+	
+	// ---------------------------------------------------------------------------
+	// 
+	// ---------------------------------------------------------------------------
+
+	FSQLiteMallocFuncs::Register();
+	sqlite3_initialize();
+	
+	sqlite3* CheckDatabase;
+	int ErrorCode = sqlite3_open_v2( "check-database", &CheckDatabase, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_MEMORY, nullptr );
+	if( ErrorCode != SQLITE_OK )
+	{
+		LOG_SQLITEEDITOR_ERROR( __func__, ErrorCode, "Open check-database" );
+
+		Context.AddError( FText::FromString("Could not open check-database") );
+	}
+	else
+	{
+		for( auto& x : DatabaseInfos->GeneratedTableSqlCommands )
+		{
+			char* ErrorMessage = nullptr;
+
+			ErrorCode = sqlite3_exec( CheckDatabase, TCHAR_TO_ANSI(*x.Value), nullptr, nullptr, &ErrorMessage );
+			if( ErrorCode != SQLITE_OK )
+			{
+				FString message = FString::Printf( TEXT( "For table [%s]\n\n%s\n\n%hs.\n" ), *x.Key, *x.Value, ErrorMessage );
+				Context.AddError( FText::FromString( message ) );
+			}
+
+			if( ErrorMessage != nullptr )
+			{
+				sqlite3_free( ErrorMessage );
+			}
+		}
+	
+		sqlite3_close_v2( CheckDatabase );
+	}
+
+	sqlite3_shutdown();
+
+	// ---------------------------------------------------------------------------
+	// 
+	// ---------------------------------------------------------------------------
+
 	if( Context.GetNumErrors() == 0 )
 	{
 		DatabaseInfos->bIsValidated = true;
@@ -148,4 +213,85 @@ EDataValidationResult USqliteDatabaseInfoValidator::ValidateLoadedAsset_Implemen
 
 		return EDataValidationResult::Invalid;
 	}
+}
+
+FString USqliteDatabaseInfoValidator::GenerateCreateTableSqlCommand( const FDatabaseTable& CustomTable )
+{
+	bool bNeedComma = false;
+	FString Sql = FString( "CREATE" ); 
+
+	if( CustomTable.bTemporary )
+	{
+		Sql += " TEMPORARY";
+	}
+
+	Sql += " TABLE ";
+
+	if( CustomTable.bIfNotExists )
+	{
+		Sql += "IF NOT EXISTS ";		
+	}
+
+	if( ! CustomTable.SchemaName.IsEmpty() )
+	{
+		Sql += CustomTable.SchemaName + ".";
+	}
+
+	Sql += CustomTable.TableName;
+	Sql +=  + "\n(\n";
+
+	// ------------------------------------------------------------------------
+	// - Table columns
+	// ------------------------------------------------------------------------
+
+	bNeedComma = false;
+
+	for( auto& Column : CustomTable.Columns)
+	{
+		if( bNeedComma )
+		{
+			Sql += ",\n";
+		}
+		
+		Sql += "\t" + Column.ColumnName; // + " " + Column.ColumnType;
+
+		bNeedComma = true;
+	}
+
+	// ------------------------------------------------------------------------
+	// - Table constraints
+	// ------------------------------------------------------------------------
+
+	for( auto& Constraint : CustomTable.ExtraConstraints )
+	{
+		Sql += ",\n";
+		Sql += Constraint;
+	}
+
+	Sql += "\n)";
+
+	// ------------------------------------------------------------------------
+	// - Table options --------------------------------------------------------
+	// ------------------------------------------------------------------------
+	
+	bNeedComma = false;
+
+	if( CustomTable.bWithoutRowId )
+	{
+		Sql += " WITHOUT ROWID";
+		bNeedComma = true;
+	}
+
+	if( bNeedComma )
+	{
+		Sql += ",";
+	}
+	
+	if( CustomTable.bStrict )
+	{
+		Sql += " STRICT";
+		bNeedComma = true;
+	}
+	
+	return Sql;
 }

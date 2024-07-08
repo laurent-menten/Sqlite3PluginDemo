@@ -11,7 +11,7 @@
  * 
  */
 UCLASS()
-class SQLITE3EDITOR_API UK2Node_Step : public UK2Node
+class SQLITE3TOOLS_API UK2Node_Step : public UK2Node
 {
 	GENERATED_BODY()
 

@@ -32,15 +32,42 @@ class SQLITE3_API USqliteDatabase : public UObject
 
 	friend class USqlite3Subsystem;
 	friend class USqliteStatement;
-	friend class USqliteStatics;
+
+public:
+	/**
+	 * Create a USqliteDatabase object.
+	 *
+	 * If used more than one for a single USqliteDatabaseInfos instance, the same
+	 * USqliteDatabase object is always returned.
+	 *
+	 * @param DatabaseInfo - Asset of type USqliteDatabaseInfos describing the database connection
+	 * @param Branch (out) - Upon return, will determine the execution pin
+	 * @param ReturnCode (out) - The return code explaining the failure
+	 * @param DatabaseHandle (out) - A pointer to the USqliteDatabase on success or null
+	 */
+	
+	UFUNCTION( BlueprintCallable, Category = "Sqlite3|Database", meta = (ExpandEnumAsExecs = "Branch", DisplayName = "Get Sqlite3 Database Object (from DatabaseInfo asset)") )
+	static void GetSqliteDatabaseObjectFromAsset(
+		USqliteDatabaseInfo* DatabaseInfo,
+		ESqliteDatabaseSimpleExecutionPins& Branch,
+		ESqliteErrorCode& ReturnCode,
+		UPARAM(DisplayName = "Database") USqliteDatabase* & DatabaseHandle
+	);
+
+protected:
+	/**
+	 * Note: DatabaseInfo asset has been validated by editor.
+	 */
+	void Initialize( const USqliteDatabaseInfo* DatabaseInfo );
+
 
 private:
 	// ---------------------------------------------------------------------------
-	// -
+	// - Configuration -----------------------------------------------------------
 	// ---------------------------------------------------------------------------
 
 	/**
-	 * The DatabaseInfo asset.
+	 * The DatabaseInfo asset used to describe this database.
 	 */
 	UPROPERTY()
 	TObjectPtr<USqliteDatabaseInfo> DatabaseInfoAsset;
@@ -61,26 +88,49 @@ private:
 	TMap<FName, FString> Attachments;
 
 	// ---------------------------------------------------------------------------
-	// - State -------------------------------------------------------------------
+	// - Runtime state -----------------------------------------------------------
 	// ---------------------------------------------------------------------------
 
+	/**
+	 * Native sqlite3 database handler.
+	 */
 	sqlite3* DatabaseConnectionHandler = nullptr;
 
+	/**
+	 * List of statements not yet finalized
+	 */
 	UPROPERTY()
 	TArray<USqliteStatement*> ActiveStatements;
 
-	void StatementFinalized( USqliteStatement* Statement );
-	
-	bool bIsInitialized = false;
-	bool bIsOpen = false;
-
+	/**
+	 * 
+	 */
 	int LastSqliteReturnCode = SQLITE_OK;
+
+	/**
+	 * 
+	 */
+	bool bIsInitialized = false;
+
+	/**
+	 * 
+	 */
+	bool bIsOpen = false;
 
 	// ---------------------------------------------------------------------------
 
+	/**
+	 * 
+	 */
 	int StoredApplicationId;
+
+	/**
+	 * 
+	 */
 	int StoredUserVersion;
 
+	// ---------------------------------------------------------------------------
+	// - Static strings and names ------------------------------------------------
 	// ---------------------------------------------------------------------------
 
 	static const FString Sql_BeginTransaction;
@@ -109,11 +159,6 @@ private:
 	static const FString Sql_CreateLog;
 
 	// ---------------------------------------------------------------------------
-
-	/**
-	 * Note: DatabaseInfo asset has been validated by editor.
-	 */
-	void Initialize( const USqliteDatabaseInfo* DatabaseInfo );
 
 	/**
 	 *
@@ -252,7 +297,7 @@ public:
 	 * Close the database and release any left resources.
 	 */
 	UFUNCTION( BlueprintCallable, Category = "Sqlite3|Database" )
-	void Close();
+	void Close( bool bForceClose = false );
 
 #pragma endregion
 
@@ -269,7 +314,7 @@ public:
 	 * @param OutApplicationId - Where to store the application_id from the database
 	 */
 	UFUNCTION( BlueprintCallable, Category = "Sqlite3|Version", meta = (ExpandEnumAsExecs = "Branch"))
-	void GetApplicationId( ESqliteDatabaseSimpleExecutionPins& Branch, int& OutApplicationId );
+	void GetApplicationId( ESqliteDatabaseSimpleExecutionPins& Branch, int& OutApplicationId ) const;
 
 	/**
 	 * (C++ version)
@@ -288,7 +333,7 @@ public:
 	 * @param OutUserVersion - Where to store the user_version from the database
 	 */
 	UFUNCTION( BlueprintCallable, Category = "Sqlite3|Version", meta = (ExpandEnumAsExecs = "Branch") )
-	void GetUserVersion( ESqliteDatabaseSimpleExecutionPins& Branch, int& OutUserVersion );
+	void GetUserVersion( ESqliteDatabaseSimpleExecutionPins& Branch, int& OutUserVersion ) const;
 
 	/**
 	 * (C++ version)
@@ -310,19 +355,19 @@ public:
 	 * Begins and SQL transaction.
 	 */
 	UFUNCTION( BlueprintCallable, Category = "Sqlite3|Transaction" )
-		virtual int BeginTransaction( const FString& Hint = "" ) final;
+	virtual int BeginTransaction( const FString& Hint = "-" ) final;
 
 	/**
 	 * Commits and SQL transaction.
 	 */
 	UFUNCTION( BlueprintCallable, Category = "Sqlite3|Transaction" )
-	virtual int Commit( const FString& Hint = "" ) final;
+	virtual int Commit( const FString& Hint = "-" ) final;
 
 	/**
 	 * Rollbacks and SQL transaction.
 	 */
 	UFUNCTION( BlueprintCallable, Category = "Sqlite3|Transaction" )
-	virtual int Rollback( const FString& Hint = "" ) final;
+	virtual int Rollback( const FString& Hint = "-" ) final;
 
 #pragma endregion
 
@@ -369,20 +414,37 @@ public:
 	// ===========================================================================
 
 	void EnableAutovacuumCallback( bool enabled );
+	
 	void EnablePreupdateHook( bool enabled );
 	void EnableUpdateHook( bool enabled );
+
 	void EnableCommitHook( bool enabled );
 	void EnableRollbackHook( bool enabled );
 
 #pragma endregion
 
+#pragma region *** Pragma
 	// ===========================================================================
 	// = 
 	// ===========================================================================
 
-	bool IsInitialized();
+	int QueryPragma( FString PragmaName, bool& value, FString* Schema = nullptr );
+	int QueryPragma( FString PragmaName, int& value, FString* Schema = nullptr );
+	int QueryPragma( FString PragmaName, FString& value, FString* Schema = nullptr );
 
-	bool IsOpen();
+	int SetPragma( FString PragmaName, bool value, FString* Schema = nullptr );
+	int SetPragma( FString PragmaName, int value, FString* Schema = nullptr );
+	int SetPragma( FString PragmaName, FString& value, FString* Schema = nullptr );
+#pragma endregion
+	
+
+	// ===========================================================================
+	// = 
+	// ===========================================================================
+
+	bool IsInitialized() const;
+
+	bool IsOpen() const;
 
 	FString GetDatabaseFileName() const;
 
@@ -406,5 +468,10 @@ public:
 
 	UFUNCTION( BlueprintCallable, Category = "Sqlite3|Statement" )
 	USqliteStatement* Prepare( FString sql );
+
+	// ---------------------------------------------------------------------------
+
+	void StatementFinalized( USqliteStatement* Statement );
+
 };
 

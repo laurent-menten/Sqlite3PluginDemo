@@ -18,6 +18,7 @@ class SQLITE3_API USqlite3Subsystem : public UGameInstanceSubsystem
 {
 	GENERATED_BODY()
 
+	friend class USqliteDatabase;
 	friend class USqliteStatics;
 
 private:

@@ -1,4 +1,4 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+// (c)2024+ Laurent Menten
 
 #include "Sqlite3.h"
 #include "Sqlite3Log.h"

@@ -2,7 +2,7 @@
 
 
 #include "K2Node_Step.h"
-#include "Sqlite3Editor.h"
+#include "Sqlite3Tools.h"
 #include "SqliteStatement.h"
 
 #include "K2Utils.h"

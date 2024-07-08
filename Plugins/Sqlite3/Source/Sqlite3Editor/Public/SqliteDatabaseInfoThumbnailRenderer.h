@@ -15,12 +15,13 @@ class  SQLITE3EDITOR_API USqliteDatabaseInfoThumbnailRenderer : public UTextureT
 	GENERATED_BODY()
 
 private:
-    UObject* Texture;
+	UPROPERTY()
+    TObjectPtr<UObject> Texture;
 
 public:
     USqliteDatabaseInfoThumbnailRenderer();
 
-    void Draw( UObject* Object, int32 X, int32 Y, uint32 Width, uint32 Height, FRenderTarget* Viewport, FCanvas* Canvas, bool bAdditionalViewFamily ) override;
+    virtual void Draw( UObject* Object, int32 X, int32 Y, uint32 Width, uint32 Height, FRenderTarget* Viewport, FCanvas* Canvas, bool bAdditionalViewFamily ) override;
 
-    void GetThumbnailSize( UObject* Object, float Zoom, uint32& OutWidth, uint32& OutHeight ) const override;
+    virtual void GetThumbnailSize( UObject* Object, float Zoom, uint32& OutWidth, uint32& OutHeight ) const override;
 };

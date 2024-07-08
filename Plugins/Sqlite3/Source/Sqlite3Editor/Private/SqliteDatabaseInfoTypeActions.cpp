@@ -3,20 +3,23 @@
 #include "SqliteDatabaseInfoTypeActions.h"
 #include "ThumbnailRendering/SceneThumbnailInfo.h"
 
+// ----------------------------------------------------------------------------
 
 FSqliteDatabaseInfoTypeActions::FSqliteDatabaseInfoTypeActions( EAssetTypeCategories::Type InAssetCategory )
 	: AssetCategory( InAssetCategory )
 {
 }
 
-void FSqliteDatabaseInfoTypeActions::OpenAssetEditor( const TArray<UObject*>& InObjects, TSharedPtr<class IToolkitHost> EditWithinLevelEditor )
+// ----------------------------------------------------------------------------
+
+UClass* FSqliteDatabaseInfoTypeActions::GetSupportedClass() const
 {
-	FSimpleAssetEditor::CreateEditor( EToolkitMode::Standalone, EditWithinLevelEditor, InObjects );
+	return USqliteDatabaseInfo::StaticClass();
 }
 
 FText FSqliteDatabaseInfoTypeActions::GetName() const
 {
-	return FText::FromName( TEXT( "Sqlite3 Database Infos" ) );
+	return INVTEXT( "Sqlite3 Database Infos" );
 }
 
 uint32 FSqliteDatabaseInfoTypeActions::GetCategories()
@@ -31,12 +34,7 @@ FColor FSqliteDatabaseInfoTypeActions::GetTypeColor() const
 
 FText FSqliteDatabaseInfoTypeActions::GetAssetDescription( const FAssetData& AssetData ) const
 {
-	return FText::FromName( TEXT( "Sqlite3 Database connection descriptor" ) ); 
-}
-
-UClass* FSqliteDatabaseInfoTypeActions::GetSupportedClass() const
-{
-	return USqliteDatabaseInfo::StaticClass();
+	return INVTEXT( "Sqlite3 Database connection descriptor" ); 
 }
 
 UThumbnailInfo* FSqliteDatabaseInfoTypeActions::GetThumbnailInfo( UObject* Asset ) const
@@ -51,6 +49,13 @@ UThumbnailInfo* FSqliteDatabaseInfoTypeActions::GetThumbnailInfo( UObject* Asset
 	}
 
 	return ThumbnailInfo;
+}
+
+// ----------------------------------------------------------------------------
+
+void FSqliteDatabaseInfoTypeActions::OpenAssetEditor( const TArray<UObject*>& InObjects, TSharedPtr<class IToolkitHost> EditWithinLevelEditor )
+{
+	FSimpleAssetEditor::CreateEditor( EToolkitMode::Standalone, EditWithinLevelEditor, InObjects );
 }
 
 

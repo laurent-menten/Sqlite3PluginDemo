@@ -2,8 +2,6 @@
 
 #include "SqliteDatabaseInfo.h"
 #include "Sqlite3Log.h" 
-#include "SqliteDatabase.h"
-#include "Misc/DataValidation.h"
 
 // ============================================================================
 // =
@@ -24,4 +22,9 @@ USqliteDatabaseInfo::~USqliteDatabaseInfo()
 	UE_LOG( LogSqlite, Log, TEXT("%08.8p %s()"),
 		this,
 		*FString( __func__ ) );
+}
+
+void USqliteDatabaseInfo::Test()
+{
+	UE_LOG( LogSqlite, Warning, TEXT("Test button clicked...") );
 }

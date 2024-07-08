@@ -9,8 +9,8 @@
 USqliteDatabaseInfoFactory::USqliteDatabaseInfoFactory() 
 {
 	SupportedClass = USqliteDatabaseInfo::StaticClass();
-	bEditAfterNew = true;
 	bCreateNew = true;
+	bEditAfterNew = true;
 }
 
 bool USqliteDatabaseInfoFactory::IsMacroFactory() const
@@ -20,8 +20,9 @@ bool USqliteDatabaseInfoFactory::IsMacroFactory() const
 
 UObject* USqliteDatabaseInfoFactory::FactoryCreateNew(UClass* InClass, UObject* InParent, FName InName, EObjectFlags Flags, UObject* Context, FFeedbackContext* Warn)
 {
-	check( InClass->IsChildOf( USqliteDatabaseInfoFactory::StaticClass() ) );
+	checkf( InClass->IsChildOf( USqliteDatabaseInfoFactory::StaticClass() ), TEXT("Invalid class for database") );
 
-	auto Database = NewObject<USqliteDatabaseInfo>( InParent, InClass, InName, Flags | RF_Transactional, Context );
-	return Database;
+	const auto NewDatabase = NewObject<USqliteDatabaseInfo>( InParent, InClass, InName, Flags | RF_Transactional, Context );
+	
+	return NewDatabase;
 }

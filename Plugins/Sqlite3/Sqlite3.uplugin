@@ -27,9 +27,14 @@
 			"LoadingPhase": "Default"
 		},
 		{
-			"Name": "Sqlite3Editor",
+			"Name": "Sqlite3Tools",
 			"Type": "UncookedOnly",
-			"LoadingPhase": "Default"
+			"LoadingPhase": "PostEngineInit"
+		},
+		{
+			"Name": "Sqlite3Editor",
+			"Type": "Editor",
+			"LoadingPhase": "PostEngineInit"
 		}
 	]
 }

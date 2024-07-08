@@ -9,13 +9,16 @@
 class FSqliteDatabaseInfoTypeActions : public FAssetTypeActions_Base
 {
 	friend class FsqLite3EditorModule;
+
 private:
 	EAssetTypeCategories::Type AssetCategory;
 
 public:
 	FSqliteDatabaseInfoTypeActions( EAssetTypeCategories::Type InAssetCategory );
 
-	virtual void OpenAssetEditor( const TArray<UObject*>& InObjects, TSharedPtr<class IToolkitHost> EditWithinLevelEditor = TSharedPtr<IToolkitHost>()) override;
+	// ---
+
+	virtual UClass* GetSupportedClass() const override;
 
 	virtual FText GetName() const override;
 
@@ -25,9 +28,9 @@ public:
 
 	virtual FText GetAssetDescription( const FAssetData& AssetData ) const override;
 
-	virtual UClass* GetSupportedClass() const override;
-
-
 	virtual UThumbnailInfo* GetThumbnailInfo( UObject* Asset ) const override;
 
+	// ---
+
+	virtual void OpenAssetEditor( const TArray<UObject*>& InObjects, TSharedPtr<class IToolkitHost> EditWithinLevelEditor = TSharedPtr<IToolkitHost>()) override;
 };

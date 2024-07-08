@@ -17,6 +17,6 @@ class SQLITE3_API USqliteData : public UObject
 public:
 	virtual FString ToString() const;
 
-	UFUNCTION( BlueprintCallable, meta = (DisplayName = "ToString") )
+	UFUNCTION( BlueprintCallable, Category="Sqlite3", meta = (DisplayName = "ToString") )
 	virtual FString ToString_Blueprint() const;
 };

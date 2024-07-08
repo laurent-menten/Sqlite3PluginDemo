@@ -1,0 +1,29 @@
+﻿// (c)2024+ Laurent Menten
+
+#pragma once
+
+#include "CoreMinimal.h"
+
+#include "Sqlite3/Public/SqliteStatics.h"
+
+DECLARE_LOG_CATEGORY_EXTERN( LogSqliteTools, Log, All );
+
+FORCEINLINE void LOG_SQLITETOOLS_WARNING( const char Func [], const int ErrorCode, const char* Message )
+{
+	UE_LOG( LogSqliteTools, Warning, TEXT("%hs = %hs [%d] : %hs"), Func, USqliteStatics::GetSqlite3ErrorSymbol(ErrorCode), ErrorCode, Message );
+}
+
+FORCEINLINE void LOG_SQLITETOOLS_WARNING( const char Func [], const int ErrorCode, const char* Tag, const char* Message )
+{
+	UE_LOG( LogSqliteTools, Warning, TEXT("%hs = %hs [%d] : [%hs] %hs"), Func, USqliteStatics::GetSqlite3ErrorSymbol(ErrorCode), ErrorCode, Tag, Message );
+}
+
+FORCEINLINE void LOG_SQLITETOOLS_ERROR( const char Func [], const int ErrorCode, const char* Message )
+{
+	UE_LOG( LogSqliteTools, Error, TEXT("%hs = %hs [%d] : %hs"), Func, USqliteStatics::GetSqlite3ErrorSymbol(ErrorCode), ErrorCode, Message );
+}
+
+FORCEINLINE void LOG_SQLITETOOLS_ERROR( const char Func [], const int ErrorCode, const char* Tag, const char* Message )
+{
+	UE_LOG( LogSqliteTools, Error, TEXT("%hs = %hs [%d] : [%hs] %hs"), Func, USqliteStatics::GetSqlite3ErrorSymbol(ErrorCode), ErrorCode, Tag, Message );
+}

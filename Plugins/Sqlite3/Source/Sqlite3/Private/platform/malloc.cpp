@@ -2,7 +2,7 @@
 
 #if SQLITE_OS_OTHER
 
-#include "platform/malloc.h"
+#include "../../Sqlite3/Private/platform/malloc.h"
 #include "Sqlite3Log.h"
 
 #include "CoreTypes.h"

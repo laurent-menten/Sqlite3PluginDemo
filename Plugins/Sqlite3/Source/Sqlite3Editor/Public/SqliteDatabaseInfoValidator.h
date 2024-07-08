@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "EditorValidatorBase.h"
+#include "SqliteDatabaseInfo.h"
 #include "SqliteDatabaseInfoValidator.generated.h"
 
 /**
@@ -20,4 +21,7 @@ public:
 	virtual bool CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const override;
 
 	virtual EDataValidationResult ValidateLoadedAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& Context) override;
+
+private:
+	static FString GenerateCreateTableSqlCommand( const FDatabaseTable& CustomTable );
 };

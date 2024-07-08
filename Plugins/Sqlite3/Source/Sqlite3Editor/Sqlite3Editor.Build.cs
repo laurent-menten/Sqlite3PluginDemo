@@ -29,9 +29,6 @@ public class Sqlite3Editor : ModuleRules
             "SlateCore",
 
 			"UnrealEd",
-			"GraphEditor",
-            "BlueprintGraph",
-			"KismetCompiler",
 			"AssetTools",
 
             "Sqlite3",

@@ -18,26 +18,6 @@ class SQLITE3_API USqliteStatics : public UBlueprintFunctionLibrary
 private:
 
 public:
-	// ---------------------------------------------------------------------------
-	// - 
-	// ---------------------------------------------------------------------------
-
-	/**
-	 * Create a USqliteDatabase object.
-	 *
-	 * @param DatabaseInfo - Asset of type USqliteDatabaseInfos describing the database connection
-	 * @param Branch (out) - Upon return, will determine the execution pin
-	 * @param ReturnCode (out) - The return code explaining the failure
-	 * @param DatabaseHandle (out) - A pointer to the USqliteDatabase on success or null
-	 */
-	
-	UFUNCTION( BlueprintCallable, Category = "Sqlite3|Database", meta = (ExpandEnumAsExecs = "Branch", DisplayName = "Create Sqlite3 Database Object from DatabaseInfo asset") )
-	static void CreateSqliteDatabaseObject_Asset(
-		const USqliteDatabaseInfo* DatabaseInfo,
-		ESqliteDatabaseSimpleExecutionPins& Branch,
-		ESqliteErrorCode& ReturnCode,
-		UPARAM(DisplayName = "Database") USqliteDatabase* & DatabaseHandle
-	);
 
 	// ---------------------------------------------------------------------------
 	// - Library version ---------------------------------------------------------

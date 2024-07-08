@@ -1,9 +1,10 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+// (c)2024+ Laurent Menten
 
 #include "Sqlite3Editor.h"
+#include "Sqlite3EditorLog.h"
+
 #include "IAssetTools.h"
 #include "AssetToolsModule.h"
-#include "Sqlite3Log.h"
 #include "SqliteDatabaseInfoThumbnailRenderer.h"
 #include "SqliteDatabaseInfoTypeActions.h"
 
@@ -18,20 +19,21 @@ const FText FSqlite3EditorModule::AssetCatgegoryDisplayName = FText::FromString(
 // the exact timing is specified in the .uplugin file per-module
 void FSqlite3EditorModule::StartupModule()
 {
-	IAssetTools& AssetTools = FModuleManager::LoadModuleChecked<FAssetToolsModule>( "AssetTools" ).Get();
+//	IAssetTools& AssetTools = FModuleManager::LoadModuleChecked<FAssetToolsModule>( "AssetTools" ).Get();
 
+	IAssetTools& AssetTools = FAssetToolsModule::GetModule().Get();
+	
 	EAssetTypeCategories::Type AssetCategory = AssetTools.RegisterAdvancedAssetCategory( AssetCategoryName, AssetCatgegoryDisplayName );
-	{
-		TSharedPtr<IAssetTypeActions> ActionType = MakeShareable( new FSqliteDatabaseInfoTypeActions( AssetCategory ) );
-		AssetTools.RegisterAssetTypeActions( ActionType.ToSharedRef() );
-	}
+	
+	SqliteDatabaseInfoTypeActions = MakeShareable( new FSqliteDatabaseInfoTypeActions( AssetCategory ) );
+	AssetTools.RegisterAssetTypeActions( SqliteDatabaseInfoTypeActions.ToSharedRef() );
 
 	UThumbnailManager::Get().RegisterCustomRenderer( USqliteDatabaseInfo::StaticClass(), USqliteDatabaseInfoThumbnailRenderer::StaticClass() );
 }
 
 // This function may be called during shutdown to clean up your module.
 // For modules that support dynamic reloading, we call this function before
-// unloading the module.
+// unloading the module.	
 void FSqlite3EditorModule::ShutdownModule()
 {
 }
