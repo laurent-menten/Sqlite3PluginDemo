@@ -80,37 +80,6 @@ enum class ESqliteDatabaseCacheMode : uint8
 // === 
 // ============================================================================
 
-/**
- *
- */
-USTRUCT()
-struct FDatabaseAttachmentInfo
-{
-	GENERATED_USTRUCT_BODY()
-
-	/**
-	 * The attachment database filename.
-	 */
-	UPROPERTY(EditAnywhere, Category="Sqlite3")
-	FString FileName;
-
-	/**
-	 * The schema name for this attachment.
-	 */
-	UPROPERTY(EditAnywhere, Category="Sqlite3")
-	FName SchemaName;
-
-	/**
-	 * The user_version for this attachment.
-	 */
-	UPROPERTY(EditAnywhere, Category="Sqlite3")
-	int32 UserVersion = 1;
-};
-
-// ============================================================================
-// === 
-// ============================================================================
-
 UENUM( BlueprintType )
 enum class ESqliteDatabaseColumnType : uint8
 {
@@ -158,10 +127,11 @@ struct FDatabaseTable
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, Category="Sqlite3")
-	FString SchemaName;
-
-	UPROPERTY(EditAnywhere, Category="Sqlite3")
 	FString TableName;
+
+	// TODO: remove and use schema name from upper entity if needed.
+	UPROPERTY(EditAnywhere, Category="Sqlite3")
+	FString SchemaName;
 
 	UPROPERTY(EditAnywhere, Category="Sqlite3")
 	bool bTemporary = false;
@@ -187,6 +157,41 @@ struct FDatabaseTable
 // ============================================================================
 
 /**
+ *
+ */
+USTRUCT()
+struct FDatabaseAttachmentInfo
+{
+	GENERATED_USTRUCT_BODY()
+
+	/**
+	 * The attachment database filename.
+	 */
+	UPROPERTY(EditAnywhere, Category="Sqlite3")
+	FString FileName;
+
+	/**
+	 * The schema name for this attachment.
+	 */
+	UPROPERTY(EditAnywhere, Category="Sqlite3")
+	FString SchemaName;
+
+	/**
+	 * The user_version for this attachment.
+	 */
+	UPROPERTY(EditAnywhere, Category="Sqlite3")
+	int32 UserVersion = 1;
+
+	UPROPERTY(EditAnywhere, Category = "Sqlite3")
+	TArray<FDatabaseTable> CustomTables;
+};
+
+
+// ============================================================================
+// === 
+// ============================================================================
+
+/**
  * 
  */
 UCLASS( BlueprintType, Blueprintable, DefaultToInstanced, EditInlineNew, ClassGroup = Sqlite3, Category = "Sqlite3 Database" )
@@ -195,6 +200,9 @@ class SQLITE3_API USqliteDatabaseInfo : public UDataAsset
 	GENERATED_BODY()
 
 	friend class USqliteDatabaseInfoValidator;
+	friend class FSqliteDatabaseInfoTypeActions;
+	friend class ISqlite3Editor;
+
 	friend class USqliteDatabase;
 	friend class USqliteStatics;
 	
@@ -202,6 +210,12 @@ public:
 	USqliteDatabaseInfo( const FObjectInitializer& ObjectInitializer );
 
 	virtual ~USqliteDatabaseInfo() override;
+
+	virtual void PreSave( FObjectPreSaveContext SaveContext ) override;
+
+	// ========================================================================
+	// = Internal =============================================================
+	// ========================================================================
 
 private:
 	/**
@@ -223,14 +237,27 @@ private:
 	 * Was this asset successfully generated
 	 */
 	UPROPERTY()
-	bool bIsValidated;
+	bool bCreateTableSqlCommandsGenerated = false;
+
+	/**
+	 * (Internal)
+	 * Was this asset successfully generated
+	 */
+	UPROPERTY()
+	bool bIsValidated = false;
+
+	/**
+	 * (Internal)
+	 * Information for thumbnail rendering
+	 * */
+	UPROPERTY( Instanced )
+	TObjectPtr<class UThumbnailInfo> ThumbnailInfo;
+
+	// ========================================================================
+	// = Data =================================================================
+	// ========================================================================
 	
 public:
-	UFUNCTION( BlueprintCallable, CallInEditor, Category="Tools" )
-	void Test();
-
-	// ---------------------------------------------------------------------------
-
 	/**
 	 * A C++ or blueprint class deriving from USqliteDatabase to be used to
 	 * handle the database connection.
@@ -241,8 +268,8 @@ public:
 	/**
 	 * The database filename.
 	 * • An empty string will open a private temporary on-disk database.
-	 * • :memory: will open a private in-memory temporary database.
-	 * • If OpenAsURI is set, filename is interpreted as a RFC3986 compliant URI.
+	 * • :memory: will open a private temporary in-memory database.
+	 * • If OpenAsURI (advanced option) is set, filename will be interpreted as a RFC3986 compliant URI.
 	 */
 	UPROPERTY(EditAnywhere, Category="Database")
 	FString DatabaseFileName;
@@ -252,6 +279,7 @@ public:
 	/**
 	 * The application_id value for the project. This value is set when the database is
 	 * created and will cause the open operation to fail if it is changed.
+	 * A value of zero is forbidden (sqlite default value that will trigger OnCreate event).
 	 */
 	UPROPERTY(EditAnywhere, Category="Database")
 	int32 ApplicationId = 1;
@@ -275,8 +303,9 @@ public:
 	/**
 	 * The Schema name for main database.
 	 */
+	// TODO: remove as 'main' and 'temp' is used for main database.
 	UPROPERTY(EditAnywhere, Category = "Database|Advanced")
-	FName SchemaName = FName( "" );
+	FString SchemaName = FString( "main" );
 	
 	/**
 	 * Override the default %PlatformUserDir%/%ProjectName%/ directory where
@@ -330,7 +359,7 @@ public:
 	// ---------------------------------------------------------------------------
 
 	/**
-	 * 
+	 * A list of attachment databases.
 	 */
 	UPROPERTY(EditAnywhere, Category="Database|Attachmements")
 	TArray<FDatabaseAttachmentInfo> Attachments;
@@ -345,7 +374,10 @@ public:
 
 	// ---------------------------------------------------------------------------
 
-	UPROPERTY(EditAnywhere, Category = "Schema|Custom tables")
+	/**
+	 * 
+	 */
+	UPROPERTY(EditAnywhere, Category = "Schema")
 	TArray<FDatabaseTable> CustomTables;
 
 	/**
@@ -372,32 +404,21 @@ public:
 	UPROPERTY(EditAnywhere, Category="Schema|Default tables")
 	bool bCreateLogTable = false;
 
-	// ---------------------------------------------------------------------------
+	// ===========================================================================
+	// = Debug ===================================================================
+	// ===========================================================================
 
+	/**
+	 * Delete database file if it exists before trying to open it.
+	 */
 	UPROPERTY(EditAnywhere, Category="Debug")
 	bool bDeleteFileBeforeOpen = false;
 
 	/**
-	 * (Internal)
+	 * (Internal - Visible but Read-only)
 	 * The sql requests that were generated from custom table descriptions in the asset.
+	 * Updated during PreSave because asset validation is done after save.
 	 */
-	//	UPROPERTY( Instanced )
-	UPROPERTY(EditAnywhere, Category="Debug" )
-	//	UPROPERTY(BlueprintReadOnly, Category = "Debug", meta=(AllowPrivateAccess = "true"))
-	TMap<FString,FString> GeneratedTableSqlCommands;
-	
-
-	// ===========================================================================
-	// =
-	// ===========================================================================
-
-	/** Information for thumbnail rendering */
-	UPROPERTY( Instanced )
-	TObjectPtr<class UThumbnailInfo> ThumbnailInfo;
-
-	// ===========================================================================
-	// =
-	// ===========================================================================
-
-public:
+	UPROPERTY( VisibleDefaultsOnly, Category="Debug" )
+	TMap<FString,FString> GeneratedCreateTableSqlCommands;
 };

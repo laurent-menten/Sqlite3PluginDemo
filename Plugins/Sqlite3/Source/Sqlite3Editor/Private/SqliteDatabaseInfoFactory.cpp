@@ -22,7 +22,7 @@ UObject* USqliteDatabaseInfoFactory::FactoryCreateNew(UClass* InClass, UObject* 
 {
 	checkf( InClass->IsChildOf( USqliteDatabaseInfoFactory::StaticClass() ), TEXT("Invalid class for database") );
 
-	const auto NewDatabase = NewObject<USqliteDatabaseInfo>( InParent, InClass, InName, Flags | RF_Transactional, Context );
-	
-	return NewDatabase;
+	const auto NewDatabaseInfo = NewObject<USqliteDatabaseInfo>( InParent, InClass, InName, Flags | RF_Transactional, Context );
+
+	return NewDatabaseInfo;
 }

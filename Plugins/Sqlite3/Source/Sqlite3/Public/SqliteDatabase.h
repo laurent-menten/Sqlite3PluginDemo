@@ -85,7 +85,7 @@ private:
 	/**
 	 * The SchemaName/DatabaseFilePath mapping for the attached databases.
 	 */
-	TMap<FName, FString> Attachments;
+	TMap<FString, FString> Attachments;
 
 	// ---------------------------------------------------------------------------
 	// - Runtime state -----------------------------------------------------------
@@ -209,7 +209,7 @@ private:
 	 * OnCreatePrivate, OnCreate method and possibly the OnCreateEvent have
 	 * been processed.
 	 */
-	bool UpdateApplicationId( FName Schema = FName("main") );
+	bool UpdateApplicationId( FString Schema = FString( "" ) );
 
 	/**
 	 * Set the user_version PRAGMA to our current version of the database
@@ -224,7 +224,7 @@ private:
 	 * the OnUpdateEvent have been processed.
 
 	 */
-	bool UpdateUserVersion( FName Schema = FName( "main" ) );
+	bool UpdateUserVersion( FString Schema = FString( "" ) );
 
 	/*
 	 * Called by subsystem to terminate undergoing actions and close database 

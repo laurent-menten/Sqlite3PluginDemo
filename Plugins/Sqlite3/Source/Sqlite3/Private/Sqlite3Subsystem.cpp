@@ -1,6 +1,7 @@
 // (c)2024+ Laurent Menten
 
 #include "Sqlite3Subsystem.h"
+#include "platform/Sqlite3Platform.h"
 
 #include "CoreMinimal.h"
 #include "Kismet/GameplayStatics.h"
@@ -8,8 +9,29 @@
 #include "Misc/MessageDialog.h"
 
 #if PLATFORM_WINDOWS
+
 #include <shlobj.h>
+
 #elif PLATEFORM_LINUX
+
+// no include required
+
+#elif PLATFORM_PS4
+#error PS4 platform not supported...
+#elif PLATFORM_XBOXONE
+#error XBOX-1 platform not supported...
+#elif PLATFORM_MAC
+#error MAC platform not supported...
+#elif PLATFORM_IOS
+#error IOS platform not supported...
+#elif PLATFORM_ANDROID
+#error ANDROID platform not supported...
+#elif PLATFORM_WINRT
+#error WIN-RT platform not supported...
+#elif PLATFORM_HTML5
+#error HTML5 platform not supported...
+#else	
+#error Unknown platform not supported...
 #endif
 
 #include "Sqlite3Log.h"
@@ -54,9 +76,7 @@ void USqlite3Subsystem::Initialize( FSubsystemCollectionBase& Collection )
 #elif PLATFORM_LINUX
 
 	DefaultDatabaseDirectory = FString("~") / FString(".") ;
-
-#else
-#error Platform not supported...
+	
 #endif
 
 	const TCHAR* ProjectName = FApp::GetProjectName();
@@ -65,13 +85,13 @@ void USqlite3Subsystem::Initialize( FSubsystemCollectionBase& Collection )
 	UE_LOG( LogSqlite, Log, TEXT("Default database directory: '%s'."), *DefaultDatabaseDirectory );
 
 	// ----------------------------------------------------------------------------
-	// Create default database directory it if required
+	// Create default database directory if it does not exists
 	// ----------------------------------------------------------------------------
 
-	IPlatformFile& platformFile = FPlatformFileManager::Get().GetPlatformFile();
-	if( !platformFile.DirectoryExists( *DefaultDatabaseDirectory ) )
+	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+	if( !PlatformFile.DirectoryExists( *DefaultDatabaseDirectory ) )
 	{
-		if( !platformFile.CreateDirectoryTree( *DefaultDatabaseDirectory ) )
+		if( !PlatformFile.CreateDirectoryTree( *DefaultDatabaseDirectory ) )
 		{
 			const FText Format = LOCTEXT("SqliteDirectoryError", "Error creating directory '{Directory}'.\nAborting.");
 
@@ -90,10 +110,10 @@ void USqlite3Subsystem::Initialize( FSubsystemCollectionBase& Collection )
 	}
 
 	// ---------------------------------------------------------------------------
-	// Initialize external library
+	// Initialize library
 	// ---------------------------------------------------------------------------
 
-	if( !InitializeSqlite() )
+	if( ! InitializeSqlite() )
 	{
 		const FText Format = LOCTEXT( "SqliteLibraryInitializationError", "Error initializing Sqlite library : ({ErrorCode}) {ErrorString}.\nAborting." );
 
@@ -117,26 +137,24 @@ void USqlite3Subsystem::Initialize( FSubsystemCollectionBase& Collection )
 
 bool USqlite3Subsystem::InitializeSqlite()
 {
-	if( !bIsSqliteInitialized )
+	if( ! bIsSqliteInitialized )
 	{
 #if SQLITE_OS_OTHER
-		extern int sqlite3_ue_config();
 
 		SqliteInitializationStatus = sqlite3_ue_config();
 		if( SqliteInitializationStatus != SQLITE_OK )
 		{
-			UE_LOG( LogSqlite, Error, TEXT("Sqlite Platform specific initialization failed with code %d"),
-				SqliteInitializationStatus );
+			LOG_SQLITE_ERROR( SqliteInitializationStatus, "Sqlite Platform specific initialization failed." );
 
 			return bIsSqliteInitialized;
 		}
+
 #endif
 
 		SqliteInitializationStatus = sqlite3_initialize();
 		if( SqliteInitializationStatus != SQLITE_OK )
 		{
-			UE_LOG( LogSqlite, Error, TEXT("Sqlite initialization failed with code %d"),
-				SqliteInitializationStatus );
+			LOG_SQLITE_ERROR( SqliteInitializationStatus, "Sqlite initialization failed." );
 
 			return bIsSqliteInitialized;
 		}

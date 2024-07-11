@@ -9,7 +9,7 @@ DEFINE_LOG_CATEGORY( LogSqliteTools );
 
 void FSqlite3ToolsModule::StartupModule()
 {
-    
+    LOG_SQLITETOOLS_WARNING( 0, " --- " );
 }
 
 void FSqlite3ToolsModule::ShutdownModule()

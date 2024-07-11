@@ -2,9 +2,11 @@
 
 #include "Sqlite3Editor.h"
 #include "Sqlite3EditorLog.h"
+#include "SqliteDatabaseInfoValidator.h"
 
 #include "IAssetTools.h"
 #include "AssetToolsModule.h"
+#include "Sqlite3.h"
 #include "SqliteDatabaseInfoThumbnailRenderer.h"
 #include "SqliteDatabaseInfoTypeActions.h"
 
@@ -15,12 +17,41 @@ DEFINE_LOG_CATEGORY( LogSqliteEditor );
 const FName FSqlite3EditorModule::AssetCategoryName = FName( TEXT( "Sqlite3Database" ) );
 const FText FSqlite3EditorModule::AssetCatgegoryDisplayName = FText::FromString( TEXT( "Sqlite3 Database" ) );
 
-// This code will execute after your module is loaded into memory;
-// the exact timing is specified in the .uplugin file per-module
+// ----------------------------------------------------------------------------
+// - 
+// ----------------------------------------------------------------------------
+
+class Yyyy : public ISqlite3Editor
+{
+public:
+	virtual void Sqlite3EditorInterfaceTest( USqliteDatabaseInfo* SqliteDatabaseInfo ) override
+	{
+		LOG_SQLITEEDITOR_WARNING( 0, " - Y - " );
+
+		USqliteDatabaseInfoValidator::GenerateCreateTableSqlCommands( SqliteDatabaseInfo );
+	}
+};
+
+USqliteDatabaseInfoValidator* FSqlite3EditorModule::Validator = nullptr;
+
+// ----------------------------------------------------------------------------
+// - 
+// ----------------------------------------------------------------------------
+
+
+
+
+
+
+
+static Yyyy* YyyyInstance = new Yyyy();
+
+
+
 void FSqlite3EditorModule::StartupModule()
 {
-//	IAssetTools& AssetTools = FModuleManager::LoadModuleChecked<FAssetToolsModule>( "AssetTools" ).Get();
-
+	LOG_SQLITEEDITOR_WARNING( 0, " --- " );
+	
 	IAssetTools& AssetTools = FAssetToolsModule::GetModule().Get();
 	
 	EAssetTypeCategories::Type AssetCategory = AssetTools.RegisterAdvancedAssetCategory( AssetCategoryName, AssetCatgegoryDisplayName );
@@ -29,13 +60,13 @@ void FSqlite3EditorModule::StartupModule()
 	AssetTools.RegisterAssetTypeActions( SqliteDatabaseInfoTypeActions.ToSharedRef() );
 
 	UThumbnailManager::Get().RegisterCustomRenderer( USqliteDatabaseInfo::StaticClass(), USqliteDatabaseInfoThumbnailRenderer::StaticClass() );
+
+	FSqlite3Module::GetModule().RegisterSqlite3EditorInterface( YyyyInstance );
 }
 
-// This function may be called during shutdown to clean up your module.
-// For modules that support dynamic reloading, we call this function before
-// unloading the module.	
 void FSqlite3EditorModule::ShutdownModule()
 {
+	FSqlite3Module::GetModule().RegisterSqlite3EditorInterface( nullptr );
 }
 
 #undef LOCTEXT_NAMESPACE

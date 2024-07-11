@@ -6,11 +6,17 @@
 #include "SqliteDatabaseInfoTypeActions.h"
 #include "Modules/ModuleManager.h"
 
+class USqliteDatabaseInfoValidator;
+
 class FSqlite3EditorModule : public IModuleInterface
 {
-private:
-	TSharedPtr<FSqliteDatabaseInfoTypeActions> SqliteDatabaseInfoTypeActions;
+	friend class USqliteDatabaseInfoValidator;
 	
+private:
+	static USqliteDatabaseInfoValidator* Validator;
+
+	TSharedPtr<FSqliteDatabaseInfoTypeActions> SqliteDatabaseInfoTypeActions;
+
 public:
 	static const FName AssetCategoryName;
 	static const FText AssetCatgegoryDisplayName;

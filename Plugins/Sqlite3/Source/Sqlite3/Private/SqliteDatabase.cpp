@@ -252,7 +252,7 @@ ESqliteDatabaseOpenExecutionPins USqliteDatabase::DoOpenSqliteDatabase()
 
 	if( !IsInitialized() )
 	{
-		LOG_SQLITE_ERROR( __func__, -1, "Database not initialized." );
+		LOG_SQLITE_ERROR( -1, "Database not initialized." );
 
 		return ESqliteDatabaseOpenExecutionPins::OnFail;
 	}
@@ -264,7 +264,7 @@ ESqliteDatabaseOpenExecutionPins USqliteDatabase::DoOpenSqliteDatabase()
 	LastSqliteReturnCode = sqlite3_open_v2( TCHAR_TO_ANSI(*DatabaseFilePath), &DatabaseConnectionHandler, OpenFlags, "unreal-fs" );
 	if( LastSqliteReturnCode != SQLITE_OK )
 	{
-		LOG_SQLITE_ERROR( __func__, GetErrorCode(), "Open failed." );
+		LOG_SQLITE_ERROR( GetErrorCode(), "Open failed." );
 
 		return ESqliteDatabaseOpenExecutionPins::OnFail;
 	}
@@ -278,7 +278,7 @@ ESqliteDatabaseOpenExecutionPins USqliteDatabase::DoOpenSqliteDatabase()
 	LastSqliteReturnCode = sqlite3_prepare_v2( this->DatabaseConnectionHandler, TCHAR_TO_ANSI( *Sql_AttachDatabase ), -1, &stmt, 0 );
 	if( LastSqliteReturnCode != SQLITE_OK )
 	{
-		LOG_SQLITE_ERROR( __func__, GetErrorCode(), "Failed to prepare 'AttachDatabase' statement." );
+		LOG_SQLITE_ERROR( GetErrorCode(), "Failed to prepare 'AttachDatabase' statement." );
 
 		return ESqliteDatabaseOpenExecutionPins::OnFail;
 	}
@@ -289,7 +289,7 @@ ESqliteDatabaseOpenExecutionPins USqliteDatabase::DoOpenSqliteDatabase()
 	{
 		UE_LOG( LogSqlite, Log, TEXT( "Attaching '%s' as '%s'" ),
 			*Attachment.Value,
-			*Attachment.Key.ToString() );
+			*Attachment.Key );
 
 		LastSqliteReturnCode = sqlite3_bind_text( stmt, 1, TCHAR_TO_ANSI( *Attachment.Value ), -1, nullptr );
 		if( LastSqliteReturnCode != SQLITE_OK )
@@ -297,7 +297,7 @@ ESqliteDatabaseOpenExecutionPins USqliteDatabase::DoOpenSqliteDatabase()
 			break;
 		}
 
-		LastSqliteReturnCode = sqlite3_bind_text( stmt, 2, TCHAR_TO_ANSI( *Attachment.Key.ToString() ), -1, nullptr );
+		LastSqliteReturnCode = sqlite3_bind_text( stmt, 2, TCHAR_TO_ANSI( *Attachment.Key ), -1, nullptr );
 		if( LastSqliteReturnCode != SQLITE_OK )
 		{
 			break;
@@ -315,7 +315,7 @@ ESqliteDatabaseOpenExecutionPins USqliteDatabase::DoOpenSqliteDatabase()
 
 	if( (LastSqliteReturnCode != SQLITE_OK) && (LastSqliteReturnCode != SQLITE_DONE) )
 	{
-		LOG_SQLITE_ERROR( __func__, GetErrorCode(), "Failed to bind or execute 'attach' statement." );
+		LOG_SQLITE_ERROR( GetErrorCode(), "Failed to bind or execute 'attach' statement." );
 	}
 
 	sqlite3_finalize( stmt );
@@ -828,7 +828,7 @@ bool USqliteDatabase::GetApplicationId( int& OutApplicationId ) const
 	int ErrorCode = sqlite3_prepare_v2( this->DatabaseConnectionHandler, TCHAR_TO_ANSI( *SqlRequest ), -1, &Stmt, nullptr );
 	if( ErrorCode != SQLITE_OK )
 	{
-		LOG_SQLITE_ERROR( __func__, ErrorCode, TCHAR_TO_ANSI( *SqlRequest ) );
+		LOG_SQLITE_ERROR( ErrorCode, TCHAR_TO_ANSI( *SqlRequest ) );
 		bReturnValue = false;
 	}
 	else
@@ -850,15 +850,15 @@ bool USqliteDatabase::GetApplicationId( int& OutApplicationId ) const
 	return bReturnValue;
 }
 
-bool USqliteDatabase::UpdateApplicationId( const FName Schema )
+bool USqliteDatabase::UpdateApplicationId( const FString Schema )
 {
-	const FString SqlRequest = FString::Format( TEXT( "PRAGMA \"{0}\".application_id = {1}" ), { Schema.ToString(), DatabaseInfoAsset->ApplicationId } );
+	const FString SqlRequest = FString::Format( TEXT( "PRAGMA \"{0}\".application_id = {1}" ), { *Schema, DatabaseInfoAsset->ApplicationId } );
 	char* ErrorMessage;
 
 	int ErrorCode = sqlite3_exec( this->DatabaseConnectionHandler, TCHAR_TO_ANSI( *SqlRequest ), nullptr, nullptr, &ErrorMessage );
 	if( ErrorCode != SQLITE_OK )
 	{
-		LOG_SQLITE_ERROR( __func__, ErrorCode, ErrorMessage );
+		LOG_SQLITE_ERROR( ErrorCode, ErrorMessage );
 	}
 	else
 	{
@@ -892,7 +892,7 @@ bool USqliteDatabase::GetUserVersion( int& OutUserVersion ) const
 	int ErrorCode = sqlite3_prepare_v2( this->DatabaseConnectionHandler, TCHAR_TO_ANSI( *SqlRequest ), -1, &Stmt, nullptr );
 	if( ErrorCode != SQLITE_OK )
 	{
-		LOG_SQLITE_ERROR( __func__, ErrorCode, TCHAR_TO_ANSI( *SqlRequest ) );
+		LOG_SQLITE_ERROR( ErrorCode, TCHAR_TO_ANSI( *SqlRequest ) );
 		bReturnValue = false;
 	}
 	else
@@ -914,15 +914,15 @@ bool USqliteDatabase::GetUserVersion( int& OutUserVersion ) const
 	return bReturnValue;
 }
 
-bool USqliteDatabase::UpdateUserVersion( const FName Schema )
+bool USqliteDatabase::UpdateUserVersion( const FString Schema )
 {
-	const FString SqlRequest = FString::Format( TEXT( "PRAGMA \"{0}\".user_version = {1}" ), { Schema.ToString(), DatabaseInfoAsset->UserVersion } );
+	const FString SqlRequest = FString::Format( TEXT( "PRAGMA \"{0}\".user_version = {1}" ), { *Schema, DatabaseInfoAsset->UserVersion } );
 	char* ErrorMessage;
 
 	int ErrorCode = sqlite3_exec( this->DatabaseConnectionHandler, TCHAR_TO_ANSI( *SqlRequest ), nullptr, nullptr, &ErrorMessage );
 	if( ErrorCode != SQLITE_OK )
 	{
-		LOG_SQLITE_ERROR( __func__, ErrorCode, ErrorMessage );
+		LOG_SQLITE_ERROR( ErrorCode, ErrorMessage );
 	}
 	else
 	{
@@ -950,11 +950,11 @@ int USqliteDatabase::BeginTransaction( const FString& Hint )
 	{
 		if( !Hint.IsEmpty() )
 		{
-			LOG_SQLITE_ERROR( __func__, ErrorCode, TCHAR_TO_ANSI(*Hint), ErrorMessage );
+			LOG_SQLITE_ERROR_TAG( ErrorCode, TCHAR_TO_ANSI(*Hint), ErrorMessage );
 		}
 		else
 		{
-			LOG_SQLITE_ERROR( __func__, ErrorCode, ErrorMessage );
+			LOG_SQLITE_ERROR( ErrorCode, ErrorMessage );
 		}
 	}
 
@@ -975,11 +975,11 @@ int USqliteDatabase::Commit( const FString& Hint )
 	{
 		if( !Hint.IsEmpty() )
 		{
-			LOG_SQLITE_ERROR( __func__, ErrorCode, TCHAR_TO_ANSI(*Hint), ErrorMessage );
+			LOG_SQLITE_ERROR_TAG( ErrorCode, TCHAR_TO_ANSI(*Hint), ErrorMessage );
 		}
 		else
 		{
-			LOG_SQLITE_ERROR( __func__, ErrorCode, ErrorMessage );
+			LOG_SQLITE_ERROR( ErrorCode, ErrorMessage );
 		}
 	}
 
@@ -1000,11 +1000,11 @@ int USqliteDatabase::Rollback( const FString& Hint )
 	{
 		if( !Hint.IsEmpty() )
 		{
-			LOG_SQLITE_ERROR( __func__, ErrorCode, TCHAR_TO_ANSI(*Hint), ErrorMessage );
+			LOG_SQLITE_ERROR_TAG( ErrorCode, TCHAR_TO_ANSI(*Hint), ErrorMessage );
 		}
 		else
 		{
-			LOG_SQLITE_ERROR( __func__, ErrorCode, ErrorMessage );
+			LOG_SQLITE_ERROR( ErrorCode, ErrorMessage );
 		}
 	}
 
@@ -1151,7 +1151,7 @@ bool USqliteDatabase::CreateTable( FName TableName, FString Sql ) const
 	const int ErrorCode = sqlite3_exec( DatabaseConnectionHandler, TCHAR_TO_ANSI( *Sql ), nullptr, nullptr, &ErrorMessage );
 	if( ErrorCode != SQLITE_OK )
 	{
-		LOG_SQLITE_ERROR( __func__, ErrorCode, TCHAR_TO_ANSI(*TableName.ToString()), ErrorMessage );
+		LOG_SQLITE_ERROR_TAG( ErrorCode, TCHAR_TO_ANSI(*TableName.ToString()), ErrorMessage );
 	}
 
 	if( ErrorMessage != nullptr )

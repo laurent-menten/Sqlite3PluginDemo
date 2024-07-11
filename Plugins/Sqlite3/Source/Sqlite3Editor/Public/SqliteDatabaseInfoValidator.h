@@ -19,9 +19,8 @@ public:
 	USqliteDatabaseInfoValidator();
 	
 	virtual bool CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const override;
-
 	virtual EDataValidationResult ValidateLoadedAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& Context) override;
 
-private:
+	static void GenerateCreateTableSqlCommands( USqliteDatabaseInfo* DatabaseInfos );
 	static FString GenerateCreateTableSqlCommand( const FDatabaseTable& CustomTable );
 };

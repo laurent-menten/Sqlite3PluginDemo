@@ -8,22 +8,14 @@
 
 DECLARE_LOG_CATEGORY_EXTERN( LogSqliteEditor, Log, All );
 
-FORCEINLINE void LOG_SQLITEEDITOR_WARNING( const char Func [], const int ErrorCode, const char* Message )
-{
-	UE_LOG( LogSqliteEditor, Warning, TEXT("%hs = %hs [%d] : %hs"), Func, USqliteStatics::GetSqlite3ErrorSymbol(ErrorCode), ErrorCode, Message );
-}
+#define LOG_SQLITEEDITOR_WARNING( ErrorCode, Message ) \
+	{UE_LOG( LogSqliteEditor, Warning, TEXT("%hs = %hs [%d] : %hs"), __func__, USqliteStatics::GetSqlite3ErrorSymbol(ErrorCode), ErrorCode, Message );}
 
-FORCEINLINE void LOG_SQLITEEDITOR_WARNING( const char Func [], const int ErrorCode, const char* Tag, const char* Message )
-{
-	UE_LOG( LogSqliteEditor, Warning, TEXT("%hs = %hs [%d] : [%hs] %hs"), Func, USqliteStatics::GetSqlite3ErrorSymbol(ErrorCode), ErrorCode, Tag, Message );
-}
+#define LOG_SQLITEEDITOR_WARNING_TAG( ErrorCode, Tag, Message ) \
+	{UE_LOG( LogSqliteEditor, Warning, TEXT("%hs = %hs [%d] : [%hs] %hs"), __func__, USqliteStatics::GetSqlite3ErrorSymbol(ErrorCode), ErrorCode, Tag, Message );}
 
-FORCEINLINE void LOG_SQLITEEDITOR_ERROR( const char Func [], const int ErrorCode, const char* Message )
-{
-	UE_LOG( LogSqliteEditor, Error, TEXT("%hs = %hs [%d] : %hs"), Func, USqliteStatics::GetSqlite3ErrorSymbol(ErrorCode), ErrorCode, Message );
-}
+#define LOG_SQLITEEDITOR_ERROR( ErrorCode, Message ) \
+	{UE_LOG( LogSqliteEditor, Error, TEXT("%hs = %hs [%d] : %hs"), __func__, USqliteStatics::GetSqlite3ErrorSymbol(ErrorCode), ErrorCode, Message );}
 
-FORCEINLINE void LOG_SQLITEEDITOR_ERROR( const char Func [], const int ErrorCode, const char* Tag, const char* Message )
-{
-	UE_LOG( LogSqliteEditor, Error, TEXT("%hs = %hs [%d] : [%hs] %hs"), Func, USqliteStatics::GetSqlite3ErrorSymbol(ErrorCode), ErrorCode, Tag, Message );
-}
+#define LOG_SQLITEEDITOR_ERROR_TAG( ErrorCode, Tag, Message ) \
+	{UE_LOG( LogSqliteEditor, Error, TEXT("%hs = %hs [%d] : [%hs] %hs"), __func__, USqliteStatics::GetSqlite3ErrorSymbol(ErrorCode), ErrorCode, Tag, Message );}

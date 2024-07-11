@@ -8,15 +8,20 @@
 #include "SqliteDatabaseInfo.h"
 
 #define SQLITE_OS_OTHER 1
+#include "Sqlite3.h"
+#include "Sqlite3Editor.h"
 #include "../../Sqlite3/Private/platform/malloc.cpp"
-//#include "../../Sqlite3/Private/sqlite/SQLite3EmbeddedPlatform.h"
 
 #include "Misc/DataValidation.h"
 
 
 USqliteDatabaseInfoValidator::USqliteDatabaseInfoValidator()
 {
+	LOG_SQLITEEDITOR_WARNING( 0, " --- " );
+
 	bIsEnabled = true;
+
+	FSqlite3EditorModule::Validator = this;
 }
 
 bool USqliteDatabaseInfoValidator::CanValidateAsset_Implementation( const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext ) const
@@ -44,8 +49,6 @@ EDataValidationResult USqliteDatabaseInfoValidator::ValidateLoadedAsset_Implemen
 		return EDataValidationResult::NotValidated;
 	}
 
-//	Context.AddWarning( FText::FromString( "It Works !" ) );
-	
 	// ---------------------------------------------------------------------------
 	// Handler class check.
 	// ---------------------------------------------------------------------------
@@ -105,7 +108,7 @@ EDataValidationResult USqliteDatabaseInfoValidator::ValidateLoadedAsset_Implemen
 	// ---------------------------------------------------------------------------
 
 	TArray<FString> AttachmentNames;
-	TArray<FName> AttachmentSchemas;
+	TArray<FString> AttachmentSchemas;
 
 	for( const auto& Attachment : DatabaseInfos->Attachments )
 	{
@@ -126,13 +129,13 @@ EDataValidationResult USqliteDatabaseInfoValidator::ValidateLoadedAsset_Implemen
 			}
 		}
 
-		if( Attachment.SchemaName.ToString().IsEmpty() )
+		if( Attachment.SchemaName.IsEmpty() )
 		{
 			Context.AddError( FText::FromString( TEXT( "Schema name cannot be empty." ) ) );
 		}
 		else if( AttachmentSchemas.Contains( Attachment.SchemaName ) )
 		{
-			FString message = FString::Printf( TEXT( "Schema '%s' is already used." ), *Attachment.SchemaName.ToString() );
+			FString message = FString::Printf( TEXT( "Schema '%s' is already used." ), *Attachment.SchemaName );
 			Context.AddError( FText::FromString( message ) );
 		}
 		else
@@ -142,22 +145,20 @@ EDataValidationResult USqliteDatabaseInfoValidator::ValidateLoadedAsset_Implemen
 	}
 
 	// ---------------------------------------------------------------------------
-	// 
+	// - Check generated table against sqlite ------------------------------------
 	// ---------------------------------------------------------------------------
 
-	DatabaseInfos->GeneratedTableSqlCommands.Empty();
-
-	for( auto& CustomTable : DatabaseInfos->CustomTables )
+	if( ! DatabaseInfos->bCreateTableSqlCommandsGenerated )
 	{
-		FString sql = GenerateCreateTableSqlCommand( CustomTable );
-
-		DatabaseInfos->GeneratedTableSqlCommands.Add( CustomTable.TableName, sql );
+		// Needed if validation is manually requested.
+		// Create table commands are generated automatically when asset is saved.
+		
+		GenerateCreateTableSqlCommands( DatabaseInfos );
 	}
-	
-	// ---------------------------------------------------------------------------
-	// 
-	// ---------------------------------------------------------------------------
 
+	// Create an in-memory database and create the tables.
+	// TODO: add other entities as well when they are implemented.
+	
 	FSQLiteMallocFuncs::Register();
 	sqlite3_initialize();
 	
@@ -165,20 +166,23 @@ EDataValidationResult USqliteDatabaseInfoValidator::ValidateLoadedAsset_Implemen
 	int ErrorCode = sqlite3_open_v2( "check-database", &CheckDatabase, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_MEMORY, nullptr );
 	if( ErrorCode != SQLITE_OK )
 	{
-		LOG_SQLITEEDITOR_ERROR( __func__, ErrorCode, "Open check-database" );
+		LOG_SQLITEEDITOR_ERROR( ErrorCode, "Open check-database" );
 
 		Context.AddError( FText::FromString("Could not open check-database") );
 	}
 	else
 	{
-		for( auto& x : DatabaseInfos->GeneratedTableSqlCommands )
+		for( auto& CreateTableSqlCommand : DatabaseInfos->GeneratedCreateTableSqlCommands )
 		{
 			char* ErrorMessage = nullptr;
 
-			ErrorCode = sqlite3_exec( CheckDatabase, TCHAR_TO_ANSI(*x.Value), nullptr, nullptr, &ErrorMessage );
+			ErrorCode = sqlite3_exec( CheckDatabase, TCHAR_TO_ANSI(*CreateTableSqlCommand.Value), nullptr, nullptr, &ErrorMessage );
 			if( ErrorCode != SQLITE_OK )
 			{
-				FString message = FString::Printf( TEXT( "For table [%s]\n\n%s\n\n%hs.\n" ), *x.Key, *x.Value, ErrorMessage );
+				FString message = FString::Printf( TEXT( "For table [%s]\n\n%s\n\n%hs.\n" ),
+					*CreateTableSqlCommand.Key,
+					*CreateTableSqlCommand.Value,
+					ErrorMessage );
 				Context.AddError( FText::FromString( message ) );
 			}
 
@@ -187,33 +191,46 @@ EDataValidationResult USqliteDatabaseInfoValidator::ValidateLoadedAsset_Implemen
 				sqlite3_free( ErrorMessage );
 			}
 		}
-	
+		
 		sqlite3_close_v2( CheckDatabase );
 	}
 
 	sqlite3_shutdown();
 
+	DatabaseInfos->bCreateTableSqlCommandsGenerated = false;
+	
 	// ---------------------------------------------------------------------------
-	// 
+	// - Exit --------------------------------------------------------------------
 	// ---------------------------------------------------------------------------
 
-	if( Context.GetNumErrors() == 0 )
-	{
-		DatabaseInfos->bIsValidated = true;
-		
-		AssetPasses( InAsset );
-
-		return EDataValidationResult::Valid;
-	}
-	else
+	if( Context.GetNumErrors() != 0 )
 	{
 		DatabaseInfos->bIsValidated = false;
 
-		AssetFails( InAsset, FText::FromString( "failed..." ) );
-
+		AssetFails( InAsset, FText::FromString( "Failed..." ) );
 		return EDataValidationResult::Invalid;
 	}
+
+	DatabaseInfos->bIsValidated = true;
+
+	AssetPasses( InAsset );
+	return EDataValidationResult::Valid;
 }
+
+void USqliteDatabaseInfoValidator::GenerateCreateTableSqlCommands( USqliteDatabaseInfo* DatabaseInfos )
+{
+	DatabaseInfos->GeneratedCreateTableSqlCommands.Empty();
+
+	for( auto& CustomTable : DatabaseInfos->CustomTables )
+	{
+		FString sql = GenerateCreateTableSqlCommand( CustomTable );
+
+		DatabaseInfos->GeneratedCreateTableSqlCommands.Add( CustomTable.TableName, sql );
+	}
+
+	DatabaseInfos->bCreateTableSqlCommandsGenerated = true;
+}
+
 
 FString USqliteDatabaseInfoValidator::GenerateCreateTableSqlCommand( const FDatabaseTable& CustomTable )
 {

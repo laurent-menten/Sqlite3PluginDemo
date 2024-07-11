@@ -2,7 +2,7 @@
 
 #if SQLITE_OS_OTHER
 
-#include "sqlite/SQLite3EmbeddedPlatform.h"
+#include "platform/SQLite3Platform.h"
 
 #include "CoreTypes.h"
 #include "Misc/Paths.h"
@@ -28,6 +28,7 @@ THIRD_PARTY_INCLUDES_END
 /*extern "C"*/ SQLITE_API int sqlite3_os_init()
 {
 	FSQLiteFileFuncs::Register();
+
 	return SQLITE_OK;
 }
 

@@ -10,7 +10,7 @@ USqliteDatabaseInfoThumbnailRenderer::USqliteDatabaseInfoThumbnailRenderer()
 {
 	static ConstructorHelpers::FObjectFinder<UTexture> TextureFinder( TEXT( "Texture2D'/Sqlite3/database-icon.database-icon'" ) );
 
-	UE_LOG( LogSqliteEditor, Error, TEXT("database-icon texture loaded : %d"), TextureFinder.Succeeded() );
+	UE_LOG( LogSqliteEditor, Error, TEXT("database-icon texture loaded : %d - %hs"), TextureFinder.Succeeded(), this == GetClass()->GetDefaultObject() ? " DEFAULT" : "" );
 
 	Texture = TextureFinder.Object;
 }

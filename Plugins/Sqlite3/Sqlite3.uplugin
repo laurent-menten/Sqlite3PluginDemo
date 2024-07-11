@@ -14,12 +14,14 @@
 	"IsBetaVersion": true,
 	"IsExperimentalVersion": true,
 	"Installed": false,
+
 	"Plugins": [
 		{
 			"Name": "DataValidation",
 			"Enabled": true
 		}
 	],
+
 	"Modules": [
 		{
 			"Name": "Sqlite3",
@@ -29,12 +31,12 @@
 		{
 			"Name": "Sqlite3Tools",
 			"Type": "UncookedOnly",
-			"LoadingPhase": "PostEngineInit"
+			"LoadingPhase": "Default"
 		},
 		{
 			"Name": "Sqlite3Editor",
 			"Type": "Editor",
-			"LoadingPhase": "PostEngineInit"
+			"LoadingPhase": "PostDefault"
 		}
 	]
 }
