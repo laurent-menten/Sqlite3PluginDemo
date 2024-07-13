@@ -211,26 +211,6 @@ void USqliteDatabase::Initialize( const USqliteDatabaseInfo* DatabaseInfo )
 	}
 
 	// ---------------------------------------------------------------------------
-	// - Compute attachments -----------------------------------------------------
-	// ---------------------------------------------------------------------------
-
-	for( const auto& Attachment : DatabaseInfoAsset->Attachments )
-	{
-		FString AttachmentFilePath;
-
-		if( Attachment.FileName.Compare( ":memory:", ESearchCase::IgnoreCase ) != 0 )
-		{
-			AttachmentFilePath = DatabaseDirectory + Attachment.FileName;
-		}
-		else
-		{
-			AttachmentFilePath = Attachment.FileName;
-		}
-
-		Attachments.Add( Attachment.SchemaName, AttachmentFilePath );
-	}
-
-	// ---------------------------------------------------------------------------
 
 	bIsInitialized = true;
 }
@@ -400,8 +380,8 @@ ESqliteDatabaseOpenExecutionPins USqliteDatabase::DoOpenSqliteDatabase()
 			return ESqliteDatabaseOpenExecutionPins::OnFail;
 		}
 
-		UpdateApplicationId( DatabaseInfoAsset->SchemaName );
-		UpdateUserVersion( DatabaseInfoAsset->SchemaName );
+		UpdateApplicationId();
+		UpdateUserVersion();
 
 		for( const auto& Attachment : Attachments )
 		{
@@ -488,7 +468,7 @@ ESqliteDatabaseOpenExecutionPins USqliteDatabase::DoOpenSqliteDatabase()
 			return ESqliteDatabaseOpenExecutionPins::OnFail;
 		}
 	
-		UpdateUserVersion( DatabaseInfoAsset->SchemaName );
+		UpdateUserVersion();
 
 		for( const auto& Attachment : Attachments )
 		{
@@ -679,26 +659,11 @@ bool USqliteDatabase::OnCreatePrivate()
 
 	bool error = false;
 
-	if( DatabaseInfoAsset->bCreateStoredStatementsTable && !CreateTable( TN_StoredStatements, Sql_CreateStoredStatements ) )
-	{
-		error |= true;
-	}
-
 	if( DatabaseInfoAsset->bCreatePropertiesTable && !CreateTable( TN_Properties, Sql_CreateProperties ) )
 	{
 		error |= true;
 	}
-
-	if( DatabaseInfoAsset->bCreateActorsStoreTable && !CreateTable( TN_ActorsStore, Sql_CreateActorsStore ) )
-	{
-		error |= true;
-	}
-
-	if( DatabaseInfoAsset->bCreateLogTable && !CreateTable( TN_Log, Sql_CreateLog ) )
-	{
-		error |= true;
-	}
-
+	
 	if( error )
 	{
 		return false;
@@ -850,9 +815,9 @@ bool USqliteDatabase::GetApplicationId( int& OutApplicationId ) const
 	return bReturnValue;
 }
 
-bool USqliteDatabase::UpdateApplicationId( const FString Schema )
+bool USqliteDatabase::UpdateApplicationId( const FString SchemaName )
 {
-	const FString SqlRequest = FString::Format( TEXT( "PRAGMA \"{0}\".application_id = {1}" ), { *Schema, DatabaseInfoAsset->ApplicationId } );
+	const FString SqlRequest = FString::Format( TEXT( "PRAGMA \"{0}\".application_id = {1}" ), { *SchemaName, DatabaseInfoAsset->ApplicationId } );
 	char* ErrorMessage;
 
 	int ErrorCode = sqlite3_exec( this->DatabaseConnectionHandler, TCHAR_TO_ANSI( *SqlRequest ), nullptr, nullptr, &ErrorMessage );
@@ -1193,17 +1158,6 @@ const FString USqliteDatabase::Sql_SchemaExists = TEXT(
 
 // ----------------------------------------------------------------------------
 
-const FName USqliteDatabase::TN_StoredStatements( "StoredStatements" );
-const FString USqliteDatabase::Sql_CreateStoredStatements = TEXT(
-	"CREATE TABLE IF NOT EXISTS StoredStatements "
-	"("
-	"\"Key\" TEXT PRIMARY KEY, "
-	"\"Group\" TEXT NOT NULL, "
-	"\"Schema\" TEXT NOT NULL, "
-	"\"Query\" TEXT NOT NULL "
-	");"
-);
-
 const FName USqliteDatabase::TN_Properties( "Properties" );
 const FString USqliteDatabase::Sql_CreateProperties = TEXT(
 	"CREATE TABLE IF NOT EXISTS Properties "
@@ -1215,29 +1169,4 @@ const FString USqliteDatabase::Sql_CreateProperties = TEXT(
 	"INSERT INTO Properties VALUES( \"software\", \"Unreal Engine Sqlite3 plugin by Laurent Menten\" );"
 	"INSERT INTO Properties VALUES( \"creation.date\", DATE('now') );"
 	"INSERT INTO Properties VALUES( \"creation.time\", TIME('now') );"
-);
-
-
-const FName USqliteDatabase::TN_ActorsStore( "ActorsStore" );
-const FString USqliteDatabase::Sql_CreateActorsStore = TEXT(
-	"CREATE TABLE IF NOT EXISTS ActorsStore "
-	"("
-	"\"Id\" INTEGER PRIMARY KEY, "
-	"\"Class\" TEXT NOT NULL, "
-	"\"Name\" TEXT, "
-	"\"Location_X\" REAL, "
-	"\"Location_Y\" REAL, "
-	"\"Location_Z\" REAL, "
-	"\"Rotation_Roll\" REAL, "
-	"\"Rotation_Pitch\" REAL, "
-	"\"Rotation_Yaw\" REAL, "
-	"\"Scale_X\" REAL, "
-	"\"Scale_Y\" REAL, "
-	"\"Scale_Z\" REAL "
-	");"
-);
-
-const FName USqliteDatabase::TN_Log( "Log" );
-const FString USqliteDatabase::Sql_CreateLog = TEXT(
-	""
 );

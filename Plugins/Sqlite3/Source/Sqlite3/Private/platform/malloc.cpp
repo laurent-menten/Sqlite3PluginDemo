@@ -18,7 +18,8 @@ THIRD_PARTY_INCLUDES_START
 #include "sqlite/sqlite3.h-inline"
 THIRD_PARTY_INCLUDES_END
 
-/** Register the malloc system */
+bool FSQLiteMallocFuncs::bRegistered = false;
+
 void FSQLiteMallocFuncs::Register()
 {
 	static const sqlite3_mem_methods MallocFuncs = {
@@ -43,16 +44,21 @@ void FSQLiteMallocFuncs::Register()
 		nullptr,
 	};
 
-	// SQLite needs a working FMemory::GetAllocSize, so check if the
-	// current allocator supports FMemory::GetAllocSize()
+	if( ! bRegistered )
+	{
+		// SQLite needs a working FMemory::GetAllocSize, so check if the
+		// current allocator supports FMemory::GetAllocSize()
 
-	void* TempMem = FMemory::Malloc( 16 );
-	bool bSupportsGetAllocSize = FMemory::GetAllocSize( TempMem ) >= 16;
-	FMemory::Free( TempMem );
+		void* TempMem = FMemory::Malloc( 16 );
+		bool bSupportsGetAllocSize = FMemory::GetAllocSize( TempMem ) >= 16;
+		FMemory::Free( TempMem );
 
-	// Use the workaround functions if GetAllocSize is not supported.
+		// Use the workaround functions if GetAllocSize is not supported.
 
-	sqlite3_config( SQLITE_CONFIG_MALLOC, bSupportsGetAllocSize ? &MallocFuncs : &WorkaroundMallocFuncs );
+		sqlite3_config( SQLITE_CONFIG_MALLOC, bSupportsGetAllocSize ? &MallocFuncs : &WorkaroundMallocFuncs );
+
+		bRegistered = true;
+	}
 }
 
 // ============================================================================

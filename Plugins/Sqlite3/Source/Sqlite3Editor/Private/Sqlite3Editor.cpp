@@ -24,11 +24,11 @@ const FText FSqlite3EditorModule::AssetCatgegoryDisplayName = FText::FromString(
 class Yyyy : public ISqlite3Editor
 {
 public:
-	virtual void Sqlite3EditorInterfaceTest( USqliteDatabaseInfo* SqliteDatabaseInfo ) override
+	virtual void PerformAssetPreValidation( USqliteDatabaseInfo* SqliteDatabaseInfo ) override
 	{
 		LOG_SQLITEEDITOR_WARNING( 0, " - Y - " );
 
-		USqliteDatabaseInfoValidator::GenerateCreateTableSqlCommands( SqliteDatabaseInfo );
+		USqliteDatabaseInfoValidator::GenerateCreateDatabaseSqlCommands( SqliteDatabaseInfo );
 	}
 };
 

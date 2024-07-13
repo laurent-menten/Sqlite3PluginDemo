@@ -77,19 +77,19 @@ enum class ESqliteDatabaseCacheMode : uint8
 };
 
 // ============================================================================
-// === 
+// === Table definition ======================================================= 
 // ============================================================================
 
 UENUM( BlueprintType )
-enum class ESqliteDatabaseColumnType : uint8
+enum class ESqliteDatabaseColumnAffinity : uint8
 {
-	Null,
-	Integer, 
-	Real,
-	Text,
-	Blob,
+	TYPE_INTEGER	UMETA( DisplayName = "Integer" ), 
+	TYPE_REAL		UMETA( DisplayName = "Real" ),
+	TYPE_NUMERIC	UMETA( DisplayName = "Numeric" ),
+	TYPE_TEXT		UMETA( DisplayName = "Text" ),
+	TYPE_BLOB		UMETA( DisplayName = "Blob" ),
 
-	Unspecified UMETA( DisplayName = "--" )
+	UNSET			UMETA( DisplayName = "None" )
 };
 
 USTRUCT()
@@ -101,7 +101,7 @@ struct FDatabaseColumn
 	FString ColumnName;
 
 	UPROPERTY(EditAnywhere, Category="Sqlite3")
-	ESqliteDatabaseColumnType ColumnType = ESqliteDatabaseColumnType::Unspecified;
+	ESqliteDatabaseColumnAffinity ColumnAffinity = ESqliteDatabaseColumnAffinity::UNSET;
 
 	UPROPERTY(EditAnywhere, Category="Sqlite3")
 	bool bPrimaryKey = false;
@@ -113,7 +113,10 @@ struct FDatabaseColumn
 	bool bNotNull = false;
 
 	UPROPERTY(EditAnywhere, Category="Sqlite3")
-	FString ExtraConstraint;
+	FString CheckConstraint;
+
+	UPROPERTY(EditAnywhere, Category="Sqlite3")
+	FString ExtraColumnConstraint;
 
 	UPROPERTY(EditAnywhere, Category="Sqlite3")
 	FString DefaultValue;
@@ -129,10 +132,6 @@ struct FDatabaseTable
 	UPROPERTY(EditAnywhere, Category="Sqlite3")
 	FString TableName;
 
-	// TODO: remove and use schema name from upper entity if needed.
-	UPROPERTY(EditAnywhere, Category="Sqlite3")
-	FString SchemaName;
-
 	UPROPERTY(EditAnywhere, Category="Sqlite3")
 	bool bTemporary = false;
 	
@@ -145,11 +144,11 @@ struct FDatabaseTable
 	UPROPERTY(EditAnywhere, Category="Sqlite3")
 	bool bStrict = false;
 
-	UPROPERTY(EditAnywhere, Category="Sqlite3")
+	UPROPERTY(EditAnywhere, Category="Sqlite3", meta = (TitleProperty = "ColumnName") )
 	TArray<FDatabaseColumn> Columns;
 
 	UPROPERTY(EditAnywhere, Category="Sqlite3")
-	TArray<FString> ExtraConstraints;	
+	TArray<FString> ExtraTableConstraints;	
 };
 
 // ============================================================================
@@ -157,44 +156,9 @@ struct FDatabaseTable
 // ============================================================================
 
 /**
- *
+ * DefaultToInstanced, 
  */
-USTRUCT()
-struct FDatabaseAttachmentInfo
-{
-	GENERATED_USTRUCT_BODY()
-
-	/**
-	 * The attachment database filename.
-	 */
-	UPROPERTY(EditAnywhere, Category="Sqlite3")
-	FString FileName;
-
-	/**
-	 * The schema name for this attachment.
-	 */
-	UPROPERTY(EditAnywhere, Category="Sqlite3")
-	FString SchemaName;
-
-	/**
-	 * The user_version for this attachment.
-	 */
-	UPROPERTY(EditAnywhere, Category="Sqlite3")
-	int32 UserVersion = 1;
-
-	UPROPERTY(EditAnywhere, Category = "Sqlite3")
-	TArray<FDatabaseTable> CustomTables;
-};
-
-
-// ============================================================================
-// === 
-// ============================================================================
-
-/**
- * 
- */
-UCLASS( BlueprintType, Blueprintable, DefaultToInstanced, EditInlineNew, ClassGroup = Sqlite3, Category = "Sqlite3 Database" )
+UCLASS( BlueprintType, Blueprintable, EditInlineNew, ClassGroup = Sqlite3, Category = "Sqlite3 Database" )
 class SQLITE3_API USqliteDatabaseInfo : public UDataAsset
 {
 	GENERATED_BODY()
@@ -213,41 +177,38 @@ public:
 
 	virtual void PreSave( FObjectPreSaveContext SaveContext ) override;
 
-	// ========================================================================
-	// = Internal =============================================================
-	// ========================================================================
-
 private:
+	// ------------------------------------------------------------------------
+	// - Runtime utils --------------------------------------------------------
+	// ------------------------------------------------------------------------
+
 	/**
-	 * (Internal)
+	 * (Internal - Runtime)
 	 * The USqliteDatabase instance associated with this USqliteDatabaseInfo.
 	 */
 	UPROPERTY()
 	USqliteDatabase* DatabaseInstance = nullptr;
 
 	/**
-	 * (Internal)
+	 * (Internal - Runtime)
 	 * How many times this USqliteDatabaseInfo was used to create a USqliteDatabase object.
 	 */
 	UPROPERTY()
 	int DatabaseOpenCount = 0;
 
+	// ------------------------------------------------------------------------
+	// - Editor utils ---------------------------------------------------------
+	// ------------------------------------------------------------------------
+	
 	/**
-	 * (Internal)
+	 * (Internal - Editor)
 	 * Was this asset successfully generated
 	 */
 	UPROPERTY()
-	bool bCreateTableSqlCommandsGenerated = false;
+	bool bCreateDatabaseSqlCommandsGenerated = false;
 
 	/**
-	 * (Internal)
-	 * Was this asset successfully generated
-	 */
-	UPROPERTY()
-	bool bIsValidated = false;
-
-	/**
-	 * (Internal)
+	 * (Internal - Editor)
 	 * Information for thumbnail rendering
 	 * */
 	UPROPERTY( Instanced )
@@ -262,8 +223,8 @@ public:
 	 * A C++ or blueprint class deriving from USqliteDatabase to be used to
 	 * handle the database connection.
 	 */
-	UPROPERTY(EditAnywhere, Category="Database")
-	TSubclassOf<USqliteDatabase> DatabaseClass;
+	UPROPERTY( EditAnywhere, Category="Database" )
+	TSubclassOf<USqliteDatabase> DatabaseClass; // = USqliteDatabase::StaticClass();
 
 	/**
 	 * The database filename.
@@ -271,8 +232,8 @@ public:
 	 * • :memory: will open a private temporary in-memory database.
 	 * • If OpenAsURI (advanced option) is set, filename will be interpreted as a RFC3986 compliant URI.
 	 */
-	UPROPERTY(EditAnywhere, Category="Database")
-	FString DatabaseFileName;
+	UPROPERTY( EditAnywhere, Category="Database" )
+	FString DatabaseFileName = FString( "" );
 
 	// ---------------------------------------------------------------------------
 
@@ -281,14 +242,14 @@ public:
 	 * created and will cause the open operation to fail if it is changed.
 	 * A value of zero is forbidden (sqlite default value that will trigger OnCreate event).
 	 */
-	UPROPERTY(EditAnywhere, Category="Database")
+	UPROPERTY( EditAnywhere, Category="Database" )
 	int32 ApplicationId = 1;
 
 	/**
 	 * The user_version value for the database. A change to this value will trigger
 	 * an OnUpdate event on database open.
 	 */
-	UPROPERTY(EditAnywhere, Category = "Database")
+	UPROPERTY( EditAnywhere, Category = "Database" )
 	int32 UserVersion = 1;
 
 	// ---------------------------------------------------------------------------
@@ -297,112 +258,77 @@ public:
 	 * How to open the database.
 	 * (SQLITE_OPEN_READONLY, SQLITE_OPEN_READWRITE, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE)
 	 */
-	UPROPERTY(EditAnywhere, Category="Database|Advanced")
+	UPROPERTY( EditAnywhere, Category="Database|Advanced" )
 	ESqliteDatabaseOpenMode OpenMode = ESqliteDatabaseOpenMode::READ_WRITE_CREATE;
-	
-	/**
-	 * The Schema name for main database.
-	 */
-	// TODO: remove as 'main' and 'temp' is used for main database.
-	UPROPERTY(EditAnywhere, Category = "Database|Advanced")
-	FString SchemaName = FString( "main" );
 	
 	/**
 	 * Override the default %PlatformUserDir%/%ProjectName%/ directory where
 	 * the database and its attachments if any should be located.
 	 */
-	UPROPERTY(EditAnywhere, Category = "Database|Advanced")
+	UPROPERTY( EditAnywhere, Category = "Database|Advanced" )
 	FDirectoryPath DatabaseDirectoryOverride;
 
 	/**
 	 * The filename can be interpreted as a URI.
 	 * (SQLITE_OPEN_URI)
 	 */
-	UPROPERTY(EditAnywhere, Category = "Database|Advanced")
+	UPROPERTY( EditAnywhere, Category = "Database|Advanced" )
 	bool bOpenAsURI = false;
 
 	/**
 	 * The database will be opened as an in-memory database.
 	 * (SQLITE_OPEN_MEMORY)
 	 */
-	UPROPERTY(EditAnywhere, Category = "Database|Advanced")
+	UPROPERTY( EditAnywhere, Category = "Database|Advanced" )
 	bool bInMemory = false;
 
 	/**
 	 * Set the threading mode for multiple connections to a single database.
 	 * (SQLITE_OPEN_NOMUTEX, SQLITE_OPEN_FULLMUTEX)
 	 */
-	UPROPERTY(EditAnywhere, Category = "Database|Advanced")
+	UPROPERTY( EditAnywhere, Category = "Database|Advanced" )
 	ESqliteDatabaseThreadingMode ThreadingMode = ESqliteDatabaseThreadingMode::UNSET;
 
 	/**
 	 * Set the caching mode.
 	 * (SQLITE_OPEN_SHAREDCACHE, SQLITE_OPEN_PRIVATECACHE)
 	 */
-	UPROPERTY(EditAnywhere, Category = "Database|Advanced")
+	UPROPERTY( EditAnywhere, Category = "Database|Advanced" )
 	ESqliteDatabaseCacheMode CacheMode = ESqliteDatabaseCacheMode::UNSET;
 
 	/**
 	 * The database connection comes up in "extended result code mode".
 	 * (SQLITE_OPEN_EXRESCODE)
 	 */
-	UPROPERTY(EditAnywhere, Category = "Database|Advanced")
+	UPROPERTY( EditAnywhere, Category = "Database|Advanced" )
 	bool bUseExtendedResultCode = false;
 
 	/**
 	 * The database filename is not allowed to contain a symbolic link.
 	 * (SQLITE_OPEN_NOFOLLOW)
 	 */
-	UPROPERTY(EditAnywhere, Category = "Database|Advanced")
+	UPROPERTY( EditAnywhere, Category = "Database|Advanced" )
 	bool bNoFollow = false;
 
 	// ---------------------------------------------------------------------------
 
 	/**
-	 * A list of attachment databases.
+	 * Create the Properties table when creating the database.
 	 */
-	UPROPERTY(EditAnywhere, Category="Database|Attachmements")
-	TArray<FDatabaseAttachmentInfo> Attachments;
-
-	// ---------------------------------------------------------------------------
-
+	UPROPERTY( EditAnywhere, Category="Schema" )
+	bool bCreatePropertiesTable = true;
+	
 	/**
-	 * 
+	 * Tables to create in database.
 	 */
-//	UPROPERTY(EditAnywhere, Category="Database")
-//	TMap<FString,FString> StoredStatements;
-
-	// ---------------------------------------------------------------------------
-
-	/**
-	 * 
-	 */
-	UPROPERTY(EditAnywhere, Category = "Schema")
+	UPROPERTY( EditAnywhere, Category = "Schema", meta = (TitleProperty = "TableName") )
 	TArray<FDatabaseTable> CustomTables;
 
 	/**
-	 * Create the StoredStatement table when creating the database.
+	 * Extra SQL commands. 
 	 */
-	UPROPERTY(EditAnywhere, Category="Schema|Default tables")
-	bool bCreateStoredStatementsTable = false;
-
-	/**
-	 * Create the Properties table when creating the database.
-	 */
-	UPROPERTY(EditAnywhere, Category="Schema|Default tables")
-	bool bCreatePropertiesTable = false;
-
-	/**
-	 * Create the ActorsStore table when creating the database.
-	 */
-	UPROPERTY(EditAnywhere, Category="Schema|Default tables")
-	bool bCreateActorsStoreTable = false;
-
-	/**
-	 * Create the Log table when creating the database.
-	 */
-	UPROPERTY(EditAnywhere, Category="Schema|Default tables")
-	bool bCreateLogTable = false;
+	UPROPERTY( EditAnywhere, Category = "Schema" )
+	TArray<FString> ExtraSqlCommands;
 
 	// ===========================================================================
 	// = Debug ===================================================================
@@ -420,5 +346,5 @@ public:
 	 * Updated during PreSave because asset validation is done after save.
 	 */
 	UPROPERTY( VisibleDefaultsOnly, Category="Debug" )
-	TMap<FString,FString> GeneratedCreateTableSqlCommands;
+	TMap<FString,FString> GeneratedDatabaseSqlCommands;
 };

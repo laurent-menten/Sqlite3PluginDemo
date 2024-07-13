@@ -1,19 +1,21 @@
 // (c)2024+ Laurent Menten
 
 
-#include "SqliteDatabaseInfoValidator.h"
-
-#include "Sqlite3EditorLog.h"
 #include "SqliteDatabase.h"
 #include "SqliteDatabaseInfo.h"
+#include "SqliteDatabaseInfoValidator.h"
+
+#include "Sqlite3Editor.h"
+#include "Sqlite3EditorLog.h"
 
 #define SQLITE_OS_OTHER 1
-#include "Sqlite3.h"
-#include "Sqlite3Editor.h"
 #include "../../Sqlite3/Private/platform/malloc.cpp"
 
 #include "Misc/DataValidation.h"
 
+// ============================================================================
+// = 
+// ============================================================================
 
 USqliteDatabaseInfoValidator::USqliteDatabaseInfoValidator()
 {
@@ -23,6 +25,10 @@ USqliteDatabaseInfoValidator::USqliteDatabaseInfoValidator()
 
 	FSqlite3EditorModule::Validator = this;
 }
+
+// ============================================================================
+// = 
+// ============================================================================
 
 bool USqliteDatabaseInfoValidator::CanValidateAsset_Implementation( const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext ) const
 {
@@ -34,6 +40,10 @@ bool USqliteDatabaseInfoValidator::CanValidateAsset_Implementation( const FAsset
 	return Super::CanValidateAsset_Implementation( InAssetData, InObject, InContext );
 }
 
+// ============================================================================
+// = 
+// ============================================================================
+
 /*
  * TO add: validation of table.
  *
@@ -43,6 +53,12 @@ bool USqliteDatabaseInfoValidator::CanValidateAsset_Implementation( const FAsset
 
 EDataValidationResult USqliteDatabaseInfoValidator::ValidateLoadedAsset_Implementation( const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& Context )
 {
+	bool bSkipSqliteCheck = false;
+
+	// ---------------------------------------------------------------------------
+	// 
+	// ---------------------------------------------------------------------------
+
 	USqliteDatabaseInfo* DatabaseInfos = Cast<USqliteDatabaseInfo>( InAsset );
 	if( ! DatabaseInfos )
 	{
@@ -50,30 +66,32 @@ EDataValidationResult USqliteDatabaseInfoValidator::ValidateLoadedAsset_Implemen
 	}
 
 	// ---------------------------------------------------------------------------
-	// Handler class check.
+	// Handler class check -------------------------------------------------------
 	// ---------------------------------------------------------------------------
 
 	if( DatabaseInfos->DatabaseClass == nullptr )
 	{
-		Context.AddError( FText::FromString( "No managing class set" ) );
+		Context.AddError( FText::FromString( "No managing class set." ) );
 	}
 
 	// ---------------------------------------------------------------------------
-	// Invalid application_id. Zero is the default value for newly created database
-	// and is used as a marker to trigger OnCreate event.
+	// Zero is the default application_id value for newly created database and is 
+	// used as a marker to trigger OnCreate event.
 	// ---------------------------------------------------------------------------
 
 	if( DatabaseInfos->ApplicationId == 0 ) 
 	{
-		Context.AddError( FText::FromString( "ApplicationId must be non-zero" ) );
+		Context.AddError( FText::FromString( "ApplicationId must be a non-zero value." ) );
 	}
 
 	// ---------------------------------------------------------------------------
-	// Database name checks
+	// Database name checks ------------------------------------------------------
 	// ---------------------------------------------------------------------------
 
-	if( DatabaseInfos->DatabaseFileName.IsEmpty() ) // Private temporary on-disk database
+	if( DatabaseInfos->DatabaseFileName.IsEmpty() ) // Private, temporary on-disk database
 	{
+		Context.AddWarning( FText::FromString( "Private, temporary on-disk databases are automatically deleted when connection is closed." ) );
+
 		if( DatabaseInfos->bInMemory && DatabaseInfos->CacheMode != ESqliteDatabaseCacheMode::SHARED_CACHE )
 		{
 			Context.AddError( FText::FromString( "In memory database with shared cache enabled should have a name." ) );
@@ -88,13 +106,13 @@ EDataValidationResult USqliteDatabaseInfoValidator::ValidateLoadedAsset_Implemen
 		}
 		else // Unsupported special filename
 		{
-			Context.AddError( FText::FromString( "Filename starts with colon, prefix filename with \"./\" to avoid error." ) );
+			Context.AddError( FText::FromString( "Filename starts with a colon, please prefix it with \"./\" to avoid ambiguity." ) );
 		}
 	}
 
 	else // Normal names
 	{
-		if( !DatabaseInfos->bOpenAsURI && (DatabaseInfos->DatabaseFileName.Contains( "/" )
+		if( ! DatabaseInfos->bOpenAsURI && (DatabaseInfos->DatabaseFileName.Contains( "/" )
 				|| DatabaseInfos->DatabaseFileName.Contains( "\\" )
 				|| DatabaseInfos->DatabaseFileName.Contains( ":" ))
 			)
@@ -104,84 +122,109 @@ EDataValidationResult USqliteDatabaseInfoValidator::ValidateLoadedAsset_Implemen
 	}
 
 	// ---------------------------------------------------------------------------
-	// Check attachments.
+	// - Check for custom tables redefinition ------------------------------------
 	// ---------------------------------------------------------------------------
 
-	TArray<FString> AttachmentNames;
-	TArray<FString> AttachmentSchemas;
+	TArray<FString> CustomTableNames;
 
-	for( const auto& Attachment : DatabaseInfos->Attachments )
+	int i = -1;
+	for( FDatabaseTable& CustomTable : DatabaseInfos->CustomTables )
 	{
-		if( Attachment.FileName.IsEmpty() )
-		{
-			Context.AddError( FText::FromString( TEXT( "Attachment filename cannot be empty, use ':memory:' or a valid name." ) ) );
-		}
-		else if( Attachment.FileName.Compare( ":memory:", ESearchCase::IgnoreCase ) != 0 )
-		{
-			if( AttachmentNames.Contains( Attachment.FileName ) )
-			{
-				FString message = FString::Printf( TEXT( "Database '%s' is already used." ), *Attachment.FileName );
-				Context.AddError( FText::FromString( message ) );
-			}
-			else
-			{
-				AttachmentNames.Add( Attachment.FileName );
-			}
-		}
+		++i;
 
-		if( Attachment.SchemaName.IsEmpty() )
+		if( CustomTable.TableName.IsEmpty() )
 		{
-			Context.AddError( FText::FromString( TEXT( "Schema name cannot be empty." ) ) );
-		}
-		else if( AttachmentSchemas.Contains( Attachment.SchemaName ) )
-		{
-			FString message = FString::Printf( TEXT( "Schema '%s' is already used." ), *Attachment.SchemaName );
+			FString message = FString::Printf(TEXT("Custom tables entry # %d: table name cannot be empty."), i );
 			Context.AddError( FText::FromString( message ) );
+
+			continue;
+		}
+		
+		if( CustomTableNames.ContainsByPredicate(
+				[CustomTable]( const FString& Str )
+				{
+					return Str.Equals( CustomTable.TableName, ESearchCase::IgnoreCase );
+				} )
+			)
+		{
+			FString message = FString::Printf(TEXT("Table [%s] was already defined."), *CustomTable.TableName );
+			Context.AddError( FText::FromString( message ) );
+
+			bSkipSqliteCheck = true;
 		}
 		else
 		{
-			AttachmentSchemas.Add( Attachment.SchemaName );
+			CustomTableNames.Add( CustomTable.TableName );
 		}
 	}
-
+	
 	// ---------------------------------------------------------------------------
 	// - Check generated table against sqlite ------------------------------------
 	// ---------------------------------------------------------------------------
 
-	if( ! DatabaseInfos->bCreateTableSqlCommandsGenerated )
+	if( ! bSkipSqliteCheck )
 	{
-		// Needed if validation is manually requested.
-		// Create table commands are generated automatically when asset is saved.
-		
-		GenerateCreateTableSqlCommands( DatabaseInfos );
+		SqliteCheck( DatabaseInfos, Context );
 	}
+
+	// ---------------------------------------------------------------------------
+	// - Exit --------------------------------------------------------------------
+	// ---------------------------------------------------------------------------
+
+	if( Context.GetNumErrors() != 0 )
+	{
+		AssetFails( InAsset, FText::FromString( "Failed..." ) );
+		return EDataValidationResult::Invalid;
+	}
+
+	AssetPasses( InAsset );
+	return EDataValidationResult::Valid;
+}
+
+// ============================================================================
+// = 
+// ============================================================================
+
+void USqliteDatabaseInfoValidator::SqliteCheck( USqliteDatabaseInfo* DatabaseInfos, FDataValidationContext& Context )
+{
+	// Needed if validation is manually requested.
+	// Create table commands are generated automatically when asset is saved.
+		
+	if( ! DatabaseInfos->bCreateDatabaseSqlCommandsGenerated )
+	{
+		GenerateCreateDatabaseSqlCommands( DatabaseInfos );
+	}
+
+	DatabaseInfos->bCreateDatabaseSqlCommandsGenerated = false;
+
+	// ------------------------------------------------------------------------
 
 	// Create an in-memory database and create the tables.
 	// TODO: add other entities as well when they are implemented.
 	
 	FSQLiteMallocFuncs::Register();
+
 	sqlite3_initialize();
-	
+
 	sqlite3* CheckDatabase;
-	int ErrorCode = sqlite3_open_v2( "check-database", &CheckDatabase, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_MEMORY, nullptr );
+	int ErrorCode = sqlite3_open_v2( "validation-database", &CheckDatabase, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_MEMORY, nullptr );
 	if( ErrorCode != SQLITE_OK )
 	{
-		LOG_SQLITEEDITOR_ERROR( ErrorCode, "Open check-database" );
+		LOG_SQLITEEDITOR_ERROR( ErrorCode, "Failed to Open validation database." );
 
-		Context.AddError( FText::FromString("Could not open check-database") );
+		Context.AddError( FText::FromString( "Failed to Open validation database." ) );
 	}
 	else
 	{
-		for( auto& CreateTableSqlCommand : DatabaseInfos->GeneratedCreateTableSqlCommands )
+		char* ErrorMessage = nullptr;
+		for( auto& SqlCommand : DatabaseInfos->GeneratedDatabaseSqlCommands )
 		{
-			char* ErrorMessage = nullptr;
-
-			ErrorCode = sqlite3_exec( CheckDatabase, TCHAR_TO_ANSI(*CreateTableSqlCommand.Value), nullptr, nullptr, &ErrorMessage );
+			ErrorCode = sqlite3_exec( CheckDatabase, TCHAR_TO_ANSI(*SqlCommand.Value), nullptr, nullptr, &ErrorMessage );
 			if( ErrorCode != SQLITE_OK )
 			{
-				FString message = FString::Printf( TEXT( "For table [%s]\n\n%s\n\n%hs.\n" ),
-					*CreateTableSqlCommand.Key,
-					*CreateTableSqlCommand.Value,
+				FString message = FString::Printf( TEXT( "In SQL request [%s]\n\n%s\n\n%hs.\n" ),
+					*SqlCommand.Key,
+					*SqlCommand.Value,
 					ErrorMessage );
 				Context.AddError( FText::FromString( message ) );
 			}
@@ -191,48 +234,48 @@ EDataValidationResult USqliteDatabaseInfoValidator::ValidateLoadedAsset_Implemen
 				sqlite3_free( ErrorMessage );
 			}
 		}
-		
+
 		sqlite3_close_v2( CheckDatabase );
 	}
 
 	sqlite3_shutdown();
-
-	DatabaseInfos->bCreateTableSqlCommandsGenerated = false;
-	
-	// ---------------------------------------------------------------------------
-	// - Exit --------------------------------------------------------------------
-	// ---------------------------------------------------------------------------
-
-	if( Context.GetNumErrors() != 0 )
-	{
-		DatabaseInfos->bIsValidated = false;
-
-		AssetFails( InAsset, FText::FromString( "Failed..." ) );
-		return EDataValidationResult::Invalid;
-	}
-
-	DatabaseInfos->bIsValidated = true;
-
-	AssetPasses( InAsset );
-	return EDataValidationResult::Valid;
 }
 
-void USqliteDatabaseInfoValidator::GenerateCreateTableSqlCommands( USqliteDatabaseInfo* DatabaseInfos )
+// ============================================================================
+// = 
+// ============================================================================
+
+void USqliteDatabaseInfoValidator::GenerateCreateDatabaseSqlCommands( USqliteDatabaseInfo* DatabaseInfos )
 {
-	DatabaseInfos->GeneratedCreateTableSqlCommands.Empty();
+	DatabaseInfos->GeneratedDatabaseSqlCommands.Empty();
 
 	for( auto& CustomTable : DatabaseInfos->CustomTables )
 	{
-		FString sql = GenerateCreateTableSqlCommand( CustomTable );
+		if( CustomTable.TableName.IsEmpty() )
+		{
+			continue;
+		}
 
-		DatabaseInfos->GeneratedCreateTableSqlCommands.Add( CustomTable.TableName, sql );
+		FString CommandName = FString::Printf( TEXT("TABLE-%s"), *CustomTable.TableName );
+
+		FString SqlCommand = GenerateCreateTableSqlCommand( CustomTable );
+
+		DatabaseInfos->GeneratedDatabaseSqlCommands.Add( CommandName, SqlCommand );
 	}
 
-	DatabaseInfos->bCreateTableSqlCommandsGenerated = true;
+	int i = 0;
+	for( auto& CustomCommand : DatabaseInfos->ExtraSqlCommands )
+	{
+		FString CommandName = FString::Printf( TEXT("SQL-%03.3d"), i++ );
+
+		DatabaseInfos->GeneratedDatabaseSqlCommands.Add( CommandName, CustomCommand );
+	}
+	
+	DatabaseInfos->bCreateDatabaseSqlCommandsGenerated = true;
 }
 
 
-FString USqliteDatabaseInfoValidator::GenerateCreateTableSqlCommand( const FDatabaseTable& CustomTable )
+FString USqliteDatabaseInfoValidator::GenerateCreateTableSqlCommand( const FDatabaseTable& CustomTable, const FString& SchemaName )
 {
 	bool bNeedComma = false;
 	FString Sql = FString( "CREATE" ); 
@@ -249,9 +292,9 @@ FString USqliteDatabaseInfoValidator::GenerateCreateTableSqlCommand( const FData
 		Sql += "IF NOT EXISTS ";		
 	}
 
-	if( ! CustomTable.SchemaName.IsEmpty() )
+	if( ! SchemaName.IsEmpty() )
 	{
-		Sql += CustomTable.SchemaName + ".";
+		Sql += SchemaName + ".";
 	}
 
 	Sql += CustomTable.TableName;
@@ -270,8 +313,64 @@ FString USqliteDatabaseInfoValidator::GenerateCreateTableSqlCommand( const FData
 			Sql += ",\n";
 		}
 		
-		Sql += "\t" + Column.ColumnName; // + " " + Column.ColumnType;
+		Sql += "\t" + Column.ColumnName; // + " " + Column.ColumnAffinity;
 
+		switch( Column.ColumnAffinity )
+		{
+			case ESqliteDatabaseColumnAffinity::TYPE_INTEGER:
+				Sql += " INTEGER";
+				break;
+
+			case ESqliteDatabaseColumnAffinity::TYPE_REAL:
+				Sql += " REAL";
+				break;
+
+			case ESqliteDatabaseColumnAffinity::TYPE_NUMERIC:
+				Sql += " NUMERIC";
+			break;
+
+			case ESqliteDatabaseColumnAffinity::TYPE_TEXT:
+				Sql += " TEXT";
+				break;
+
+			case ESqliteDatabaseColumnAffinity::TYPE_BLOB:
+				Sql += " BLOB";
+				break;
+			
+			case ESqliteDatabaseColumnAffinity::UNSET:
+				break;
+		}
+
+		if( Column.bPrimaryKey )
+		{
+			Sql += " PRIMARY KEY";
+		}
+
+		if( Column.bUnique )
+		{
+			Sql += " UNIQUE";
+		}
+
+		if( Column.bPrimaryKey )
+		{
+			Sql += " NOT NULL";
+		}
+
+		if( ! Column.CheckConstraint.IsEmpty() )
+		{
+			Sql += " CHECK( " + Column.CheckConstraint + " )";
+		}
+
+		if( ! Column.DefaultValue.IsEmpty() )
+		{
+			Sql += " DEFAULT( " + Column.DefaultValue + " )";
+		}
+
+		if( ! Column.ExtraColumnConstraint.IsEmpty() )
+		{
+			Sql += Column.ExtraColumnConstraint;
+		}
+		
 		bNeedComma = true;
 	}
 
@@ -279,7 +378,7 @@ FString USqliteDatabaseInfoValidator::GenerateCreateTableSqlCommand( const FData
 	// - Table constraints
 	// ------------------------------------------------------------------------
 
-	for( auto& Constraint : CustomTable.ExtraConstraints )
+	for( auto& Constraint : CustomTable.ExtraTableConstraints )
 	{
 		Sql += ",\n";
 		Sql += Constraint;

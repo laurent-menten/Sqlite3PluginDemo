@@ -23,5 +23,5 @@ class ISqlite3Editor
 	GENERATED_BODY()
 
 public:
-	virtual void Sqlite3EditorInterfaceTest( USqliteDatabaseInfo* SqliteDatabaseInfo ) {};
+	virtual void PerformAssetPreValidation( USqliteDatabaseInfo* SqliteDatabaseInfo ) {};
 };

@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
-#include "UObject/NoExportTypes.h"
 
 #include "sqlite/Sqlite3Include.h"
 
@@ -12,15 +11,6 @@
 #include "SqliteEnums.h" 
 #include "SqliteStatement.h"
 #include "SqliteDatabase.generated.h"
-
-USTRUCT()
-struct FSqliteDatabaseAttachment
-{
-	GENERATED_BODY()
-
-	FString AttachmentFileName;
-	FName AttachmentSchema;
-};
 
 /**
  * 
@@ -146,17 +136,8 @@ private:
 	static const FString Sql_ListSchemas;
 	static const FString Sql_SchemaExists;
 
-	static const FName TN_StoredStatements;
-	static const FString Sql_CreateStoredStatements;
-
 	static const FName TN_Properties;
 	static const FString Sql_CreateProperties;
-
-	static const FName TN_ActorsStore;
-	static const FString Sql_CreateActorsStore;
-
-	static const FName TN_Log;
-	static const FString Sql_CreateLog;
 
 	// ---------------------------------------------------------------------------
 
@@ -209,7 +190,7 @@ private:
 	 * OnCreatePrivate, OnCreate method and possibly the OnCreateEvent have
 	 * been processed.
 	 */
-	bool UpdateApplicationId( FString Schema = FString( "" ) );
+	bool UpdateApplicationId( FString SchemaName = FString( "main" ) );
 
 	/**
 	 * Set the user_version PRAGMA to our current version of the database
@@ -224,7 +205,7 @@ private:
 	 * the OnUpdateEvent have been processed.
 
 	 */
-	bool UpdateUserVersion( FString Schema = FString( "" ) );
+	bool UpdateUserVersion( FString Schema = FString( "main" ) );
 
 	/*
 	 * Called by subsystem to terminate undergoing actions and close database 
@@ -423,6 +404,7 @@ public:
 
 #pragma endregion
 
+	/*
 #pragma region *** Pragma
 	// ===========================================================================
 	// = 
@@ -436,7 +418,7 @@ public:
 	int SetPragma( FString PragmaName, int value, FString* Schema = nullptr );
 	int SetPragma( FString PragmaName, FString& value, FString* Schema = nullptr );
 #pragma endregion
-	
+*/
 
 	// ===========================================================================
 	// = 

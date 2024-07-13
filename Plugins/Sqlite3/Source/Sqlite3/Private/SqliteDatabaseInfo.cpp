@@ -30,15 +30,15 @@ USqliteDatabaseInfo::~USqliteDatabaseInfo()
 		*FString( __func__ ) );
 }
 
+// ============================================================================
+// =
+// ============================================================================
+
 void USqliteDatabaseInfo::PreSave( FObjectPreSaveContext SaveContext )
 {
-	LOG_SQLITE_WARNING( 0, "PreSaving ..." );
-	UE_LOG( LogSqlite, Log, TEXT("  > Database: %p %s"), this, *this->DatabaseFileName );
-
-	const auto SqliteEditor = FSqlite3Module::GetModule().GetEditor();
-	if( SqliteEditor )
+	if( const auto SqliteEditor = FSqlite3Module::GetModule().GetEditor() )
 	{
-		SqliteEditor->Sqlite3EditorInterfaceTest( this );
+		SqliteEditor->PerformAssetPreValidation( this );
 	}
 
 	Super::PreSave(SaveContext);
