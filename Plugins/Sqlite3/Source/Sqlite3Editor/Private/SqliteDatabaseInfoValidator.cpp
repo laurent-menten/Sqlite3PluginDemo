@@ -1,17 +1,16 @@
 // (c)2024+ Laurent Menten
 
-
-#include "SqliteDatabase.h"
-#include "SqliteDatabaseInfo.h"
 #include "SqliteDatabaseInfoValidator.h"
+#include "SqliteDatabaseInfo.h"
+#include "SqliteDatabase.h"
 
 #include "Sqlite3Editor.h"
 #include "Sqlite3EditorLog.h"
 
+#include "Misc/DataValidation.h"
+
 #define SQLITE_OS_OTHER 1
 #include "../../Sqlite3/Private/platform/malloc.cpp"
-
-#include "Misc/DataValidation.h"
 
 // ============================================================================
 // = 
@@ -19,8 +18,6 @@
 
 USqliteDatabaseInfoValidator::USqliteDatabaseInfoValidator()
 {
-	LOG_SQLITEEDITOR_WARNING( 0, " --- " );
-
 	bIsEnabled = true;
 
 	FSqlite3EditorModule::Validator = this;
@@ -32,7 +29,7 @@ USqliteDatabaseInfoValidator::USqliteDatabaseInfoValidator()
 
 bool USqliteDatabaseInfoValidator::CanValidateAsset_Implementation( const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext ) const
 {
-	if( Cast<USqliteDatabaseInfo>( InObject ) )
+	if( InObject && InObject->GetClass() == USqliteDatabaseInfo::StaticClass() )
 	{
 		return true;
 	}
@@ -44,16 +41,10 @@ bool USqliteDatabaseInfoValidator::CanValidateAsset_Implementation( const FAsset
 // = 
 // ============================================================================
 
-/*
- * TO add: validation of table.
- *
- * create a temporary database in memory database.
- * generate sql request and execute it, if it fails report failure.
- */
-
 EDataValidationResult USqliteDatabaseInfoValidator::ValidateLoadedAsset_Implementation( const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& Context )
 {
 	bool bSkipSqliteCheck = false;
+	bool bBadData = false;
 
 	// ---------------------------------------------------------------------------
 	// 
@@ -122,7 +113,7 @@ EDataValidationResult USqliteDatabaseInfoValidator::ValidateLoadedAsset_Implemen
 	}
 
 	// ---------------------------------------------------------------------------
-	// - Check for custom tables redefinition ------------------------------------
+	// - Check custom tables -----------------------------------------------------
 	// ---------------------------------------------------------------------------
 
 	TArray<FString> CustomTableNames;
@@ -132,13 +123,18 @@ EDataValidationResult USqliteDatabaseInfoValidator::ValidateLoadedAsset_Implemen
 	{
 		++i;
 
+		// --------------------------------------------------------------------
+
 		if( CustomTable.TableName.IsEmpty() )
 		{
-			FString message = FString::Printf(TEXT("Custom tables entry # %d: table name cannot be empty."), i );
+			FString message = FString::Printf( TEXT("Custom tables entry # %d: table name cannot be empty."), i );
 			Context.AddError( FText::FromString( message ) );
 
+			bSkipSqliteCheck = true;
 			continue;
 		}
+
+		// --------------------------------------------------------------------
 		
 		if( CustomTableNames.ContainsByPredicate(
 				[CustomTable]( const FString& Str )
@@ -147,22 +143,50 @@ EDataValidationResult USqliteDatabaseInfoValidator::ValidateLoadedAsset_Implemen
 				} )
 			)
 		{
-			FString message = FString::Printf(TEXT("Table [%s] was already defined."), *CustomTable.TableName );
+			FString message = FString::Printf( TEXT("Table [%s] was already defined."), *CustomTable.TableName );
 			Context.AddError( FText::FromString( message ) );
 
 			bSkipSqliteCheck = true;
+			continue;
 		}
-		else
+
+		// --------------------------------------------------------------------
+		
+		int j = -1;
+		bBadData = false;
+		for( FString Command : CustomTable.ExtraTableConstraints )
 		{
-			CustomTableNames.Add( CustomTable.TableName );
+			++j;
+
+			if( Command.IsEmpty() )
+			{
+				FString message = FString::Printf( TEXT("Extra constraint entry # %d cannot be empty."), j );
+				Context.AddError( FText::FromString( message ) );
+
+				bBadData = true;
+			}
 		}
+
+		if( bBadData )
+		{
+			bSkipSqliteCheck = true;
+			continue;
+		}
+
+		// --------------------------------------------------------------------
+		
+		CustomTableNames.Add( CustomTable.TableName );
 	}
 	
 	// ---------------------------------------------------------------------------
-	// - Check generated table against sqlite ------------------------------------
+	// - Check generated SQL commands against sqlite -----------------------------
 	// ---------------------------------------------------------------------------
 
-	if( ! bSkipSqliteCheck )
+	if( bSkipSqliteCheck )
+	{
+		Context.AddWarning( FText::FromString( "Due to previous error(s), check of generated SQL commands was skipped." ) );
+	}
+	else
 	{
 		SqliteCheck( DatabaseInfos, Context );
 	}
@@ -378,12 +402,25 @@ FString USqliteDatabaseInfoValidator::GenerateCreateTableSqlCommand( const FData
 	// - Table constraints
 	// ------------------------------------------------------------------------
 
-	for( auto& Constraint : CustomTable.ExtraTableConstraints )
+	if( CustomTable.ExtraTableConstraints.Num() > 0 )
 	{
-		Sql += ",\n";
-		Sql += Constraint;
-	}
+		Sql += ",\n\n";
+		bNeedComma = false;
 
+		for( auto& Constraint : CustomTable.ExtraTableConstraints )
+		{
+			if( bNeedComma )
+			{
+				Sql += ",\n";
+			}
+			
+			Sql += "\t" + Constraint;
+
+			bNeedComma = true;
+		}
+
+	}
+	
 	Sql += "\n)";
 
 	// ------------------------------------------------------------------------

@@ -34,6 +34,9 @@ USqliteDatabaseInfo::~USqliteDatabaseInfo()
 // =
 // ============================================================================
 
+// Because the asset is saved before validation is performed we need to
+// override PreSave method to make sure SQL commands are generated beforehand.
+
 void USqliteDatabaseInfo::PreSave( FObjectPreSaveContext SaveContext )
 {
 	if( const auto SqliteEditor = FSqlite3Module::GetModule().GetEditor() )
@@ -41,5 +44,5 @@ void USqliteDatabaseInfo::PreSave( FObjectPreSaveContext SaveContext )
 		SqliteEditor->PerformAssetPreValidation( this );
 	}
 
-	Super::PreSave(SaveContext);
+	Super::PreSave( SaveContext );
 }
